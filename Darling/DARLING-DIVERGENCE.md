@@ -63,6 +63,15 @@ Three cannot be done this way: **CoreUI** and **Accessibility** have no headers 
 and **CommonCrypto** lives in `usr/include`, so it needs a module in the SDK's own
 `usr/include/module.modulemap` rather than a framework module.
 
+**None of the three is actually required**, so the module-map route does not terminate here:
+
+- Every `import CoreUI` is behind `OPENSWIFTUI_LINK_COREUI`, a build flag this build does not set.
+- All three `import Accessibility` sites are self-disabling: two behind `#if canImport(Accessibility)`,
+  one behind `#if canImport(UIKit)`, which is false on a macOS target.
+
+They appeared in the census because the census greps import lines, which says what a source file
+mentions, not what the build needs. Check the guard before treating a census entry as a blocker.
+
 Also in the SDK: `module Darwin` declares no `os` submodule, so `Darwin.os.lock` does not resolve and
 `import Observation` fails. `os/lock.h` is present; only the declaration is missing. A separate module
 map cannot add it (`parent module must be defined before the submodule`) -- it has to go in the SDK's
@@ -111,10 +120,47 @@ Still open, all in this package's own private shims:
 
 | Header | Problem |
 |---|---|
-| `Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSText.h:27` | `typedef NS_ENUM(NSInteger, NSWritingDirection)` fails with `invalid storage class specifier in function declarator`. **Not root-caused.** Two things are ruled out: `NS_ENUM` is defined and reachable in both SDKs (`NSObjCRuntime.h:251`), and preprocessing the header without `-fmodules` expands it correctly to `typedef enum NSWritingDirection : NSInteger NSWritingDirection; enum ...`. The failure appears only when the header is absorbed into the `UIFoundation_Private` module. Do not assume a missing macro. |
 | `Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSAttributedString.h:59` | `NSAttributedStringFormattingOptions` is not declared in Darling's Foundation. |
+| `Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSStringDrawing.h:44` | `NSAttributedStringKey` is not declared in Darling's Foundation. |
 | `Sources/OpenSwiftUI_SPI/Shims/CoreGraphics/CoreGraphics_Private.h:15` | `cg_nullable` is undefined in Darling's CoreGraphics headers. |
 | `Sources/OpenSwiftUI_SPI/Shims/QuartzCore/` | `duplicate interface definition for class 'CAFilter'`. |
+
+### `NSText.h:27` -- root-caused, and it was not the macro it looked like
+
+The failure was `invalid storage class specifier in function declarator` on
+`typedef NS_ENUM(NSInteger, NSWritingDirection)`, which reads as a broken `NS_ENUM`. It is not.
+
+Falsified first: `NS_ENUM` is defined and reachable (`NSObjCRuntime.h:251` in both SDKs);
+preprocessing without `-fmodules` expands it correctly; and a purpose-built module whose header
+does `#import <Foundation/Foundation.h>` and then `#ifndef NS_ENUM / #error` builds fine both
+textually and modularly, so macro visibility across the module boundary is not the problem either.
+
+The actual cause is **`NS_HEADER_AUDIT_BEGIN`, four lines earlier**, which Darling's SDK does not
+define at all (`grep -rl 'define NS_HEADER_AUDIT_BEGIN'` over both SDKs returns nothing, while the
+control `NS_ASSUME_NONNULL_BEGIN` is found). Undefined, `NS_HEADER_AUDIT_BEGIN(nullability,
+sendability)` parses as a function declarator taking parameters named `nullability` and
+`sendability`, and the *next* declaration lands inside it. Clang reports the position where the
+parse breaks, not the macro that broke it.
+
+Minimal reproduction, three error lines byte-identical to the real failure:
+
+```objc
+#import <Foundation/Foundation.h>
+NS_HEADER_AUDIT_BEGIN(nullability, sendability)
+typedef NS_ENUM(NSInteger, AuditProbeDirection) { AuditProbeDirectionNatural = -1 };
+NS_HEADER_AUDIT_END(nullability, sendability)
+```
+
+Adding `-D'NS_HEADER_AUDIT_BEGIN(...)=NS_ASSUME_NONNULL_BEGIN'` and the matching `_END` makes it
+parse, and clears the failure in all 15 shim headers that use it. The remaining errors then move
+forward to genuinely missing Foundation types, listed above.
+
+The durable fix belongs in `darling-foundation`, `include/Foundation/NSObjCRuntime.h` (submodule
+`src/external/foundation`), not in this package. Nothing in the Darling tree uses
+`NS_HEADER_AUDIT_*` today, so adding it changes nothing already there.
+
+**Lesson worth keeping: a diagnostic on line N of a header is evidence about the parser's position,
+not about line N.** Two plausible hypotheses about the named macro were both wrong.
 
 ## Build settings
 
