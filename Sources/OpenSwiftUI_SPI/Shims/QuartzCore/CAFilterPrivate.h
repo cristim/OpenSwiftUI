@@ -13,6 +13,9 @@
 
 OPENSWIFTUI_ASSUME_NONNULL_BEGIN
 
+// CAFilter is private on Apple's platforms, so this header declares it. Some QuartzCore
+// implementations expose it publicly instead, and redeclaring it there is a hard error.
+#if !__has_include(<QuartzCore/CAFilter.h>)
 @interface CAFilter : NSObject
 
 + (NSArray<NSString *> *)filterTypes;
@@ -20,6 +23,7 @@ OPENSWIFTUI_ASSUME_NONNULL_BEGIN
 + (instancetype)filterWithType:(NSString *)type;
 
 @end
+#endif
 
 typedef NS_ENUM(uint32_t, CAFilterInputKey) {
     CAFilterInputKeyAlphaValues = 0,
