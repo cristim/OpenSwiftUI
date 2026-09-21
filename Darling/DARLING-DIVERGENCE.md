@@ -133,6 +133,35 @@ without `import AppKit`, and they are plain SDK gaps: Darling's `NSHashTable.h` 
 `NSAttributedStringKey` to the nested `NSAttributedString.Key`. `NSUserActivityDelegate` is not
 declared anywhere in Darling's Foundation headers.
 
+### It also removes most of the file-order sensitivity
+
+The single-frontend compile's missing-name set moves when the file order changes, which is why
+every count here states its order. Measured over all four combinations of {baseline, this fix} x
+{sorted, reverse-sorted} on the same 881 files:
+
+| | names | order-sensitive names |
+|---|---|---|
+| baseline, sorted | 95 | `IOSurfaceRef`, `NSMutableAttributedString`, `NSUserActivity` only here |
+| baseline, reversed | 96 | `NSCalendar`, `NSKeyedUnarchiver`, `NotificationCenter`, `ProcessInfo` only here |
+| fixed, sorted | 86 | `IOSurfaceRef` only here |
+| fixed, reversed | 85 | -- |
+
+Seven names moved with the order before; one does after, and that one (`IOSurfaceRef`) moved
+before as well, so nothing new is order-dependent. The fix clears 9 names in sorted order and 11
+in reversed order; the union of 13 is the set it makes order-independent.
+
+Why an umbrella gap would produce order sensitivity at all: four of those seven
+(`NSKeyedUnarchiver`, `NSNotificationCenter`, `NSMutableAttributedString`, `NSNumber`) are among
+the 50 headers `Foundation.h` does not reach, so whether their decls were visible depended on
+which file's imports had already dragged them in textually. `NSCalendar` and `NSProcessInfo` are
+reachable from the umbrella, so for those two it is the module-ownership half of the bug, not the
+umbrella half. Both halves are fixed by the same change.
+
+`NotificationCenter` never appears as a missing *type* in sorted order, which is why it is absent
+from the 75-name list and from the cleared set. What remains for it in both orders is a different
+and real gap: `NSHostingView.swift:413` reports `type 'NotificationCenter' has no member
+'default'`, the same shape as `URLSession.shared`.
+
 ### Two Foundation headers that have never compiled
 
 Both are excluded from the module map, which leaves them textual, exactly where they were before.
