@@ -169,6 +169,16 @@ Done, and both are general fixes rather than Darling adaptations:
   has been opened against OpenSwiftUI. Filing into a third party's repository is an outward-facing
   action on someone else's project and is the repository owner's call to make, not something to do
   as a side effect of a build fix. The write-up is here so it is ready if that call is yes.
+
+- **`Package.swift:328` makes `LIBRARY_EVOLUTION=1` unreachable in non-Darwin mode.** The guard is
+  `if libraryEvolutionCondition && !openCombineCondition && !swiftLogCondition`, and both
+  `openCombineCondition` and `swiftLogCondition` default to `!buildForDarwinPlatform` (lines 166-167).
+  So with `BUILD_FOR_DARWIN_PLATFORM=0` the condition is false and `-enable-library-evolution` is
+  never passed, **whatever `LIBRARY_EVOLUTION` is set to**. The env var appears to be honoured
+  (`libraryEvolutionCondition` reads it) and then is overridden by two unrelated terms. That matters
+  beyond configuration tidiness: `Tj` protocol witness dispatch thunks are emitted only under library
+  evolution, so a build that silently loses the flag silently loses symbols an ABI consumer may bind.
+  **Upstreamable, not yet offered**, for the same reason as the `cg_nullable` typo above.
 - **`Shims/QuartzCore/CAFilterPrivate.h`** declared `@interface CAFilter` unconditionally. It is
   private on Apple's platforms, which is why the shim declares it, but **Darling's QuartzCore exposes
   it publicly** in `QuartzCore/CAFilter.h`, and redeclaring it there is a hard error. Guarded on
@@ -316,6 +326,74 @@ Set bridging only". The CoreGraphics overlay does not declare the CG value types
 **Do not close this gap by stubbing the 114 types.** A `CGSize` invented here produces a framework
 that links and then lays out wrongly, which is worse than one that does not build, and nothing at
 runtime would point back at the stub.
+
+## Measured: the CoreGraphics half is mostly solved, and the Foundation half is mostly a rename
+
+Two configurations were built and their missing-name sets differenced.
+
+| | distinct missing names | total errors |
+|---|---|---|
+| Darwin path (default) | 114 | 2,961 |
+| non-Darwin CG stack | **103** | 2,736 |
+
+Solved by switching to OpenCoreGraphics/OpenQuartzCore: `CGPoint`, `CGRect`, `CGImage`, `CGLineCap`,
+`CGLineJoin`, the five `CATransform3D*` functions, `IOSurfaceRef`, `NSAttributedString`. One name
+(`bounds`) appears only in the new set, and the single remaining `CGSize` hit is in a file that does
+not import CoreGraphics -- both are cascades. In isolation `CGPoint`, `CGRect`, `CGSize` and
+`CGFloat` all resolve through `OpenCoreGraphicsShims`.
+
+`OpenCoreGraphics`, `OpenQuartzCore` and both shims build cleanly for `arm64-apple-macosx26.0` with
+library evolution, 18 files, zero errors. One flag has to be dropped: the non-Darwin path's
+`-isystem Sources/SwiftCorelibs/include` collides with Darling's real Darwin SDK
+(`os/workgroup_object.h`: `unexpected type name 'OS_object'`). Removing it takes that build from 21
+errors to 0.
+
+### The Foundation half is an exposure problem, not an implementation problem
+
+Darling's Foundation implements these classes; the Swift-facing names are what is missing. Measured
+by compiling each name against Darling's SDK for the Darwin triple, ObjC spelling versus Swift
+spelling:
+
+| Swift name | resolves | ObjC name | resolves |
+|---|---|---|---|
+| `Bundle` | no | `NSBundle` | **yes** |
+| `RunLoop` | no | `NSRunLoop` | **yes** |
+| `UserDefaults` | no | `NSUserDefaults` | **yes** |
+| `Thread` | no | `NSThread` | **yes** |
+| `Scanner` | no | `NSScanner` | **yes** |
+| `URLSession` | no | `NSURLSession` | **yes** |
+| `NumberFormatter` | no | `NSNumberFormatter` | **yes** |
+| `JSONSerialization` | no | `NSJSONSerialization` | **yes** |
+| `MeasurementFormatter` | no | `NSMeasurementFormatter` | **yes** |
+| `NotificationCenter` | no | `NSNotificationCenter` | **yes** |
+
+Ten for ten. Across all 45 Foundation and formatter names from the remaining set:
+
+| Count | Category |
+|---|---|
+| **21** | pure renames -- the ObjC class is present, only the Swift name is absent |
+| **11** | Swift-only value types with no ObjC class behind them (`AttributedString`, the `FormatStyle` family, `ObservationTracking`) -- these need real implementations |
+| **8** | ObjC class genuinely absent: 4 AppKit (`NSAnimationContext`, `NSSwitch`, `NSHapticFeedbackManager`, `NSDirectionalEdgeInsets`) and 4 Foundation formatters (`NSDateIntervalFormatter`, `NSEnergyFormatter`, `NSLengthFormatter`, `NSMassFormatter`) |
+| **5** | `NSCoder`, `NSNumber`, `NSHashTable`, `NSMutableAttributedString`, `NSUserActivity` -- resolve standalone under `import Foundation` **and** under `import AppKit`, yet the full build reports `cannot find type`. **Not reproduced, not explained.** A two-file probe produces an access-level error, not this one. Do not assume it is the same cause as the 21. |
+
+The curated SDK's `Foundation.apinotes` is 20 lines: `SwiftBridge` for NSString, NSArray,
+NSDictionary and NSSet, plus two typedefs. It names none of the 21.
+
+**No apinotes entries have been written.** This is the measurement, not the fix.
+
+## Closed permanently: the corelibs Foundation route
+
+Do not reopen this. The idea is that `BUILD_FOR_DARWIN_PLATFORM=0` routes the package down the Linux
+path, where the CG geometry types and the Foundation classes come from swift-corelibs-foundation.
+That works on Linux and **cannot** work here:
+
+    could not find module 'Swift' for target 'arm64-apple-macos';
+    found: aarch64-unknown-linux-gnu
+
+The toolchain's only non-Darwin stdlib and Foundation are built for `aarch64-unknown-linux-gnu`.
+Swift modules are target-tagged, and a Darwin triple is refused. Compiled on its own triple, corelibs
+Foundation does supply `CGSize`, `CGRect`, `CGPoint`, `Bundle`, `RunLoop`, `Thread`, `UserDefaults`
+and `AttributedString` -- verified, and irrelevant here.
 
 ## Proposal: fill out Darling's Foundation and CoreGraphics Swift overlays
 
