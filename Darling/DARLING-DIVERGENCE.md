@@ -307,6 +307,64 @@ symbol diff. swift-crypto hit exactly this with all 91 of its `canImport(CryptoK
 `OpenSwiftUIBridge` and `OpenSwiftUIExtension`, which are not compiled here. Re-check this if either
 target is ever added to the staged set; the fix is an extra build-flag term in each guard.
 
+## Handover: the wall at 75, and the cascade correction that makes it bigger
+
+**The count is 75 distinct missing names, and it is conditioned on an unmerged PR.** It was measured
+with darling-cocotron **#124 at `239faa6c`**, which is open and not an ancestor of cocotron master
+(`9d1c81ac`). Against master the Foundation to CoreGraphics to Foundation cycle returns and the
+AppKit Clang module fails with `redefinition of 'NSRectEdge'`. Both states were reproduced, so this
+is a dependency with a commit in it, not a caveat. Re-derive the number if #124 changes or lands.
+
+Trajectory: 103 -> 97 -> 83 -> 75. The SDK header corpus was byte-identical to its source across
+that whole span, so the deltas are attributable to the changes made, not to the tree moving.
+
+### Correction: the CoreGraphics members are NOT a cascade
+
+An earlier census said 32 of 57 names were cascades, and that "more than a quarter of the wall
+clears when CoreGraphics does". **That was wrong and the optimistic version should not be
+inherited.**
+
+CoreGraphics types did clear: all ten of `CGPoint`, `CGRect`, `CGSize`, `CGAffineTransform`,
+`CGColor`, `CGColorSpace`, `CGDataConsumer`, `CGImage`, `CGLineCap`, `CGLineJoin`. **Not one of the
+fifteen members went with them.**
+
+```
+import CoreGraphics; import Foundation
+r.minX  ->  error: value of type 'CGRect' has no member 'minX'
+```
+
+`minX`, `maxX`, `midX`, `midY`, `minY`, `maxY`, `width`, `height`, `isNull`, `isInfinite`,
+`standardized`, `offsetBy`, `applying`, `intersection`, `contains` are **Swift extensions from
+Apple's CoreGraphics overlay**, not C struct fields. Darling's overlay defines none of them
+(`grep -c "extension CGRect"` returns 0). The type comes from C; the members come from Swift.
+Fixing the type could never have fixed them.
+
+They were classified as cascades because they are *spelled* as members of a missing type. That is
+the trap: **a missing member of a present type is its own category, not a downstream effect.** The
+five CALayer members (`contentsScale`, `allowsEdgeAntialiasing`, `contentsFormat`, `contentsCenter`,
+`isOpaque`) are the same shape -- `CALayer.h` exists and does not declare them.
+
+Net effect: 20 names move from "clears for free" to real work. The wall is more real than the
+cascade framing suggested.
+
+### The six unexplained: four mechanisms proposed and disproved
+
+`NSCoder`, `NSNumber`, `NSMutableAttributedString`, `NSUserActivity`, `Scanner`, `URLSession` each
+resolve in isolation, resolve under their own file's exact import set, and still fail in the full
+881-file build. Do not attach a fifth mechanism without evidence; these four were tested and
+disproved:
+
+1. **Missing from Foundation.** No: each resolves under a plain `import Foundation`.
+2. **Framework re-export.** Files importing only AppKit or QuartzCore do lose Swift Foundation, and
+   that explained ten *other* names -- but these six resolve under `import AppKit` alone too.
+3. **Value versus type position.** No: `Scanner(string:)` resolves in value position. (`URLSession.shared`
+   fails differently, because Darling declares it as a method -- a separate real bug.)
+4. **The file's own import set.** No: rebuilding `Foundation` + `OpenSwiftUI_SPI` +
+   `UIFoundation_Private` still resolves `Scanner`, with the control failing in the same run.
+
+One unread clue: `Scanner` and `URLSession` were not failing before the CoreGraphics module landed
+and are after. That is a correlation, not a mechanism.
+
 ## Where this run stopped, and why
 
 The build gets through every Clang module and into Swift type-checking, then stops on **2,961

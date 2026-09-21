@@ -7,6 +7,7 @@
 //  ID: 5BC40379787EC8BFAE898D075045DC37 (SwiftUICore)
 
 #if canImport(QuartzCore)
+public import Foundation
 @_spiOnly public import QuartzCore
 
 // MARK: - CAHostingLayer
