@@ -26,6 +26,8 @@ trap 'rm -rf "$tmp"' EXIT
 	exit 1
 }
 spi=$tmp/stage/Sources/OpenSwiftUI_SPI
+# EXTRA_CFLAGS is expanded unquoted below, because it has to split into separate
+# flags. A path inside it must therefore not contain spaces.
 for m in "$@"; do
 	printf '%s\t' "$m"
 	echo "@import $m;" > "$tmp/probe.m"
