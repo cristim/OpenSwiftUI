@@ -297,6 +297,56 @@ symbol diff. swift-crypto hit exactly this with all 91 of its `canImport(CryptoK
 `OpenSwiftUIBridge` and `OpenSwiftUIExtension`, which are not compiled here. Re-check this if either
 target is ever added to the staged set; the fix is an extra build-flag term in each guard.
 
+## Where this run stopped, and why
+
+The build gets through every Clang module and into Swift type-checking, then stops on **2,961
+errors naming 114 distinct missing types**. They are not OpenSwiftUI gaps. They are Darling's Swift
+overlays.
+
+Checked directly against the overlay interfaces rather than inferred:
+
+| Type | In Darling's overlay? |
+|---|---|
+| `CGSize`, `CGPoint`, `CGRect`, `CGAffineTransform`, `CGColor`, `CGImage`, `CGColorSpace` | no |
+| `AttributedString`, `Bundle`, `RunLoop`, `UserDefaults`, `Thread`, `NSCoder`, `FormatStyle` | no |
+
+Darling's Foundation overlay says so itself: "Intentionally partial: String, Array, Dictionary and
+Set bridging only". The CoreGraphics overlay does not declare the CG value types at all.
+
+**Do not close this gap by stubbing the 114 types.** A `CGSize` invented here produces a framework
+that links and then lays out wrongly, which is worse than one that does not build, and nothing at
+runtime would point back at the stub.
+
+## Proposal: fill out Darling's Foundation and CoreGraphics Swift overlays
+
+Worth stating as its own project rather than as a SwiftUI blocker, because it is not one. Nothing in
+it is specific to SwiftUI, and it unblocks every Swift application under Darling, not one framework.
+
+**What exists** (`swift-darling/overlays`, built by `overlays/build.sh`, arm64, library evolution):
+Darwin, ObjectiveC, CoreFoundation, Dispatch, os, XPC, CoreGraphics, AppKit, and a Foundation that
+is deliberately limited to String/Array/Dictionary/Set bridging.
+
+**What is missing**, as measured by one real consumer rather than guessed:
+
+- **CoreGraphics: 12 types**, the value types first -- `CGSize`, `CGPoint`, `CGRect`,
+  `CGAffineTransform`, then `CGColor`, `CGColorSpace`, `CGImage`, `CGDataConsumer`, `CGLineCap`,
+  `CGLineJoin`.
+- **Foundation: 27 types**, split between the Swift value layer (`AttributedString`,
+  `AttributeContainer`, `AttributeScopes`, `FormatStyle`, `DiscreteFormatStyle`, `Data`, `URL`,
+  `Bundle`, `RunLoop`, `Timer`, `Notification`, `UserDefaults`, `Thread`, `ProcessInfo`,
+  `FileManager`, `DateFormatter`) and ObjC bridging (`NSAttributedString`,
+  `NSMutableAttributedString`, `NSCoder`, `NSNumber`, `NSHashTable`).
+- A tail of CoreText and CoreAnimation functions (`CTFontDescriptor*`, `CTLine`, `CATransform3D*`).
+
+**Where to start.** The CoreGraphics value types are the highest leverage and the least risky: they
+are small, their layout is fixed by the C structs already in the SDK, and they account for the
+largest single share of the failures. Foundation's value layer is larger and needs real
+implementations, not declarations, for the same reason the 114 must not be stubbed.
+
+**The sequencing lesson from this run**: the six header gaps below were each found by fixing the
+previous one and re-running. Expect the same here, and re-census the whole set after each change
+rather than the piece just touched.
+
 ## Not measured yet
 
 The symbol diff. Nothing here says how many of the 487 symbols AppZapper binds at the SwiftUI ordinal
