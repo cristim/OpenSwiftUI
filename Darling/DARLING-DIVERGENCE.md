@@ -77,13 +77,22 @@ to this package:
   `API_AVAILABLE(..., visionos(1.0))` does not expand and fails to parse.
   `Darling/patch-sdk-visionos.py` adds the six missing definitions. This is general SDK work: any
   header using `visionos(...)` is affected.
-- **Two SDKs are on the header search path at once, and the wrong Foundation wins.** `-F` entries are
-  searched before the sysroot's own frameworks, so `#import <Foundation/Foundation.h>` from AppKit
-  resolves to the in-tree SDK's Foundation (203 headers), not the curated one that carries the module
-  map and API notes (202 headers). Observed in a diagnostic trace, not inferred. This is the
-  CryptoKit Foundation trap one level down: the compile is clean and only the ABI or the module
-  contents differ. The durable fix is to merge the framework headers into the curated SDK rather than
-  stacking two SDKs with `-F`.
+- **Two SDKs are on the header search path at once.** `-F` entries are searched before the sysroot's
+  own frameworks, so `#import <Foundation/Foundation.h>` from AppKit resolves to the in-tree SDK's
+  Foundation, not the curated one that carries the module map and API notes. Observed in a
+  diagnostic trace.
+
+  **This is not the cause of the shim-header failures, and collapsing to one search path makes
+  things worse.** Tested: copied the 112 frameworks the curated SDK lacks into one directory and
+  dropped `-F` at the in-tree SDK, so Foundation could only come from the curated copy. The four
+  shim failures were byte-identical, and AppKit and UniformTypeIdentifiers *regressed*
+  (`cannot find interface declaration for 'NSLayoutConstraint'` / `'NSItemProvider'`) having built
+  cleanly before. The two Foundation header sets turn out to be the same files; the curated SDK adds
+  only `Foundation.apinotes`.
+
+  So "merge the headers into one SDK" is an untested recommendation that the one experiment run
+  against it contradicts. The working configuration is `-F <sdkext> -F <in-tree SDK>` in that order.
+  Whatever the module set is sensitive to, it is header search order, not a duplicated Foundation.
 
 Use `Darling/probe-clang-modules.sh` to re-census this. It costs seconds per module against minutes
 for a Swift build, so check the Clang side first.
@@ -102,7 +111,7 @@ Still open, all in this package's own private shims:
 
 | Header | Problem |
 |---|---|
-| `Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSText.h:27` | `typedef NS_ENUM(NSInteger, NSWritingDirection)` fails with `invalid storage class specifier in function declarator`. **Not root-caused.** `NS_ENUM` is defined and reachable in both SDKs (`NSObjCRuntime.h:251`), so the obvious explanation is wrong; do not assume it is a missing macro. |
+| `Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSText.h:27` | `typedef NS_ENUM(NSInteger, NSWritingDirection)` fails with `invalid storage class specifier in function declarator`. **Not root-caused.** Two things are ruled out: `NS_ENUM` is defined and reachable in both SDKs (`NSObjCRuntime.h:251`), and preprocessing the header without `-fmodules` expands it correctly to `typedef enum NSWritingDirection : NSInteger NSWritingDirection; enum ...`. The failure appears only when the header is absorbed into the `UIFoundation_Private` module. Do not assume a missing macro. |
 | `Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSAttributedString.h:59` | `NSAttributedStringFormattingOptions` is not declared in Darling's Foundation. |
 | `Sources/OpenSwiftUI_SPI/Shims/CoreGraphics/CoreGraphics_Private.h:15` | `cg_nullable` is undefined in Darling's CoreGraphics headers. |
 | `Sources/OpenSwiftUI_SPI/Shims/QuartzCore/` | `duplicate interface definition for class 'CAFilter'`. |
