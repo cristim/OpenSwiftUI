@@ -8,6 +8,7 @@
 //  TODO: Add test case and verify [Q]
 
 #if canImport(Darwin)
+import Foundation
 #if os(iOS) || os(visionOS)
 public import UIKit
 #elseif os(macOS)

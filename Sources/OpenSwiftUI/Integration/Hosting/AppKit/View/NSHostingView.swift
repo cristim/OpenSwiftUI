@@ -9,6 +9,7 @@
 #if os(macOS)
 @_spi(ForOpenSwiftUIOnly)
 @_spi(Private)
+public import Foundation
 public import OpenSwiftUICore
 public import AppKit
 import OpenSwiftUI_SPI

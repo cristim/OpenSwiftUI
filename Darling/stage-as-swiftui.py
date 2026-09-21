@@ -15,10 +15,15 @@ ATTR = re.compile(r'^\s*@_spi\([^)]*\)\s*$')
 # Apple's own Observation module is the ABI-correct source of Observable and
 # ObservationRegistrar; OpenObservation is only its open-source twin.
 OBS = re.compile(r'(^\s*(?:@_spi\([^)]*\)\s*)*(?:package|public|internal|fileprivate|private)?\s*import\s+)OpenObservation\s*$')
+# Both targets become one module named SwiftUI, so a reference qualified by either target's
+# module name (OpenSwiftUI.Binding, OpenSwiftUICore.Text) no longer resolves. Requalify them.
+# The lookbehind keeps OpenSwiftUICore.X from also matching the OpenSwiftUI.X pattern, and
+# stops OpenSwiftUIBridge and friends being rewritten.
+QUAL = re.compile(r'(?<![\w.])OpenSwiftUI(?:Core)?\.(?=\w)')
 
 if os.path.exists(DST):
     shutil.rmtree(DST)
-stripped = swapped = files = 0
+stripped = swapped = requalified = files = 0
 for target in ('OpenSwiftUICore', 'OpenSwiftUI'):
     for root, _, names in os.walk(os.path.join(SRC, target)):
         for n in sorted(names):
@@ -39,6 +44,8 @@ for target in ('OpenSwiftUICore', 'OpenSwiftUI'):
                 if m:
                     line = m.group(1) + 'Observation'
                     swapped += 1
+                line, n = QUAL.subn('SwiftUI.', line)
+                requalified += n
                 out.append(line)
             open(d, 'w').write('\n'.join(out) + '\n')
-print(f'staged {files} swift files, stripped {stripped} OpenSwiftUICore imports, swapped {swapped} OpenObservation imports -> {DST}')
+print(f'staged {files} swift files, stripped {stripped} OpenSwiftUICore imports, swapped {swapped} OpenObservation imports, requalified {requalified} module-qualified references -> {DST}')
