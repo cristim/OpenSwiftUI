@@ -1,0 +1,103 @@
+diff --git a/Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSParagraphStyle.h b/Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSParagraphStyle.h
+index 7ce94129..3de47845 100644
+--- a/Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSParagraphStyle.h
++++ b/Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSParagraphStyle.h
+@@ -22,6 +22,17 @@
+ #import "NSText.h"
+ #import "NSCompositionLanguage.h"
+ 
++// Darling's AppKit declares NSTextTab, NSParagraphStyle and NSMutableParagraphStyle publicly,
++// with public ivars this header cannot match, so redeclaring them is an ODR clash rather than a
++// duplicate definition. Where those headers exist, take their classes instead. The imports sit
++// outside NS_HEADER_AUDIT_BEGIN because clang rejects an include inside one.
++#if __has_include(<AppKit/NSTextTab.h>)
++#import <AppKit/NSTextTab.h>
++#endif
++#if __has_include(<AppKit/NSParagraphStyle.h>)
++#import <AppKit/NSParagraphStyle.h>
++#endif
++
+ @class NSTextList;
+ @class NSTextBlock;
+ 
+@@ -30,6 +41,8 @@ NS_HEADER_AUDIT_BEGIN(nullability, sendability)
+ #if !__NSPARAGRAPH_STYLE_SHARED_SECTION__
+ #define __NSPARAGRAPH_STYLE_SHARED_SECTION__ 1
+ 
++// AppKit declares NSLineBreakMode too; two visible declarations are ambiguous, not a clash.
++#if !__has_include(<AppKit/NSParagraphStyle.h>)
+ #if OPENSWIFTUI_TARGET_OS_OSX
+ typedef NS_ENUM(NSUInteger, NSLineBreakMode) {
+     NSLineBreakByWordWrapping = 0,         // Wrap at word boundaries, default
+@@ -49,6 +62,7 @@ typedef NS_ENUM(NSInteger, NSLineBreakMode) {
+     NSLineBreakByTruncatingMiddle    // Truncate middle of line:  "ab...yz"
+ } API_AVAILABLE(macos(10.0), ios(6.0), watchos(2.0), tvos(9.0), visionos(1.0));
+ #endif
++#endif
+ 
+ // Line break strategy describes a collection of options that can affect where line breaks are placed in a paragraph.
+ // This is independent from line break mode, which describes what happens when text is too long to fit within its container.
+@@ -81,6 +95,7 @@ typedef NS_ENUM(NSInteger, NSTextHorizontalAlignment) {
+ 
+ // NSTextTab
+ typedef NSString * NSTextTabOptionKey NS_TYPED_ENUM API_AVAILABLE(macos(10.0), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0));
++#if !__has_include(<AppKit/NSTextTab.h>)
+ OPENSWIFTUI_EXPORT NSTextTabOptionKey NSTabColumnTerminatorsAttributeName API_AVAILABLE(macos(10.0), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0)); // An attribute for NSTextTab options.  The value is NSCharacterSet.  The character set is used to determine the tab column terminating character.  The tab and newline characters are implied even if not included in the character set.
+ 
+ OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0))
+@@ -96,9 +111,11 @@ OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(7.0), tvos(9.0), watchos(2.0),
+ @property (readonly, NS_NONATOMIC_IOSONLY) CGFloat location; // Location of the tab stop inside the line fragment rect coordinate system
+ @property (readonly, NS_NONATOMIC_IOSONLY) NSDictionary<NSTextTabOptionKey, id> *options; // Optional configuration attributes
+ @end
++#endif
+ 
+ 
+ // NSParagraphStyle
++#if !__has_include(<AppKit/NSParagraphStyle.h>)
+ OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(6.0), tvos(9.0), watchos(2.0), visionos(1.0))
+ @interface NSParagraphStyle : NSObject <NSCopying, NSMutableCopying, NSSecureCoding>
+ 
+@@ -196,6 +213,8 @@ OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(6.0), tvos(9.0), watchos(2.0),
+ 
+ @end
+ 
++#endif
++
+ @interface NSMutableParagraphStyle (OpenSwiftUI_SPI)
+ 
+ @property (nonatomic) NSCompositionLanguage compositionLanguage_openswiftui_safe_wrapper
+diff --git a/Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSTextAttachment.h b/Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSTextAttachment.h
+index 8a2afa61..7a6d4542 100644
+--- a/Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSTextAttachment.h
++++ b/Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSTextAttachment.h
+@@ -15,6 +15,14 @@
+ #import <Foundation/Foundation.h>
+ #import <CoreGraphics/CoreGraphics.h>
+ 
++// Darling's AppKit declares NSTextAttachment publicly. Clang compares the whole interface, so
++// the public ivars and the property-versus-getter differences make redeclaring it an ODR clash
++// rather than a duplicate definition. Where the header exists, take its class instead.
++// The import has to sit outside NS_HEADER_AUDIT_BEGIN: clang rejects an include inside one.
++#if __has_include(<AppKit/NSTextAttachment.h>)
++#import <AppKit/NSTextAttachment.h>
++#endif
++
+ NS_HEADER_AUDIT_BEGIN(nullability, sendability)
+ 
+ @class NSTextContainer;
+@@ -34,6 +42,7 @@ NS_HEADER_AUDIT_BEGIN(nullability, sendability)
+ @class UIView;
+ #endif
+ 
++#if !__has_include(<AppKit/NSTextAttachment.h>)
+ API_AVAILABLE(macos(12.0), ios(15.0), tvos(15.0), watchos(8.0), visionos(1.0))
+ @protocol NSTextAttachmentLayout <NSObject>
+ 
+@@ -87,6 +96,7 @@ OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(7.0), tvos(9.0), watchos(2.0),
+ @property (readonly) BOOL usesTextAttachmentView API_AVAILABLE(macos(12.0), ios(15.0), tvos(15.0), visionos(1.0)) API_UNAVAILABLE(watchos);
+ 
+ @end
++#endif
+ 
+ @interface NSTextAttachment (OpenSwiftUI_SPI)
+ 
