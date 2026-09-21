@@ -307,6 +307,82 @@ symbol diff. swift-crypto hit exactly this with all 91 of its `canImport(CryptoK
 `OpenSwiftUIBridge` and `OpenSwiftUIExtension`, which are not compiled here. Re-check this if either
 target is ever added to the staged set; the fix is an extra build-flag term in each guard.
 
+## READ FIRST: every name count in this file undercounts by roughly 3.6x
+
+The counts (103, 97, 83, 75) were extracted from `cannot find type 'X'` and `cannot find 'X' in
+scope` diagnostics only. **That extraction cannot see `type 'X' has no member 'Y'`.** Missing
+*members of present types* were invisible to it, in every framework, at every step.
+
+Measured on the same build that produced 75:
+
+| | distinct | call sites |
+|---|---|---|
+| names the count captured | 75 | -- |
+| **missing members it never saw** | **196** | **1,186** |
+| spread over | 66 distinct types | |
+
+So the real remaining surface is about **271 items, not 75**. The trajectory 103 -> 97 -> 83 -> 75
+is still valid as a like-for-like comparison, because the same extraction ran each time, but the
+absolute magnitude was understated throughout.
+
+This is also the root of the cascade error recorded below: `CGRect.minX` appears only as
+`type 'CGRect' has no member 'minX'`, never as a missing name, so it read as a downstream effect of
+the missing `CGRect` type rather than as its own item.
+
+**Any future count must extract both diagnostic forms.** A member of a present type is its own
+category, and it is the larger one.
+
+### After darling-swift#42
+
+#42 ships 24 of the 196 (546 of 1,186 sites): all 19 CGRect members, `CGPoint.zero`, both CGSize
+members, and `CGImage.width`/`height`. Verified by that PR's author at symbol level, by demangling
+the gained symbols rather than reading source.
+
+**Remaining: 172 distinct members over 640 sites.** Largest owners:
+
+| members | sites | type |
+|---|---|---|
+| 28 | 58 | `CGBlendMode` |
+| 11 | 60 | `CALayer` |
+| 10 | 40 | `String?` |
+| 9 | 36 | `NSWindow` |
+| 6 | 12 | `PlatformSwitch` |
+| 5 | 82 | `CGAffineTransform` |
+| 5 | 18 | `NSEvent` |
+| 5 | 14 | `CGColorSpace` |
+| 5 | 14 | `CGColor` |
+| 4 | 18 | `Locale` |
+| 4 | 10 | `CGContext` |
+
+### The remaining CoreGraphics demand is three mechanisms, not one job
+
+Recorded here because `VibeDarling/darling-swift` has issues disabled, so #42's body is the only
+other record and it disappears from view when that PR merges.
+
+- **C enums** -- `CGBlendMode` (28 cases), `CGLineCap`, `CGLineJoin`, `CGImageAlphaInfo.alphaOnly`.
+  If Darling's headers declare the cases these import for free: a header fix, not Swift.
+- **Renames of C globals** -- `CGColorSpace.sRGB`, `.displayP3`, `.extendedSRGB`, `.linearSRGB`,
+  `.extendedLinearSRGB`.
+- **api-notes renames of C functions Darling already exports** -- `CGAffineTransform.inverted`,
+  `.concatenating`, `.translatedBy` (from `CGAffineTransformInvert/Concat/Translate`), and
+  `CGContext.scaleBy`, `.translateBy` (from `CGContextScaleCTM/TranslateCTM`).
+- Genuinely absent and still to place: `CGImage.colorSpace`, `CGAffineTransform.identity` (which
+  drags in its four siblings), `CGDrawingLayer.contentsScale`, `CGColor` (5), `CGPath`/`CGMutablePath`.
+
+`CGVector` appears nowhere in the demand; do not add it.
+
+### CALayer's members are NOT overlay work
+
+Corrected by measurement, not inherited. `CALayer` is a plain Objective-C `@interface` in Darling's
+QuartzCore, and `allowsEdgeAntialiasing`, `contentsCenter`, `contentsFormat` and `contentsScale` are
+absent from it entirely -- no backing storage, and `contentsScale` must be honoured by CARenderer, so
+no Swift extension can supply them. `isOpaque` fails for a different reason: the header declares
+`@property BOOL opaque;` with no `getter=isOpaque`.
+
+The discriminating evidence, in one run: `hidden` FAILS and `isHidden` PASSES, because only the
+latter is declared `@property(getter=isHidden)`; `cornerRadius` passes and a fabricated member fails,
+so the probe can go both ways. These belong in cocotron's QuartzCore header and implementation.
+
 ## Handover: the wall at 75, and the cascade correction that makes it bigger
 
 **The count is 75 distinct missing names, and it is conditioned on an unmerged PR.** It was measured
