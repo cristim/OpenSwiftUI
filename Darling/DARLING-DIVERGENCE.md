@@ -321,9 +321,19 @@ Measured on the same build that produced 75:
 | **missing members it never saw** | **196** | **1,186** |
 | spread over | 66 distinct types | |
 
-So the real remaining surface is about **271 items, not 75**. The trajectory 103 -> 97 -> 83 -> 75
-is still valid as a like-for-like comparison, because the same extraction ran each time, but the
-absolute magnitude was understated throughout.
+So the real remaining surface is about **271 items, not 75**.
+
+**Read 271 as a first measurement, not as a revision of 75.** The member count has never been taken
+before, at any point in this work. The type trajectory 103 -> 97 -> 83 -> 75 is valid as a
+like-for-like comparison, because the same extraction ran at each step -- but it is a trajectory for
+*types only*. There is no member trajectory, so there is no evidence that the member count is
+falling, rising or flat. Treating 271 as "75 corrected upward" would imply a trend nobody has data
+for. The next person to measure it establishes the second point, not the second revision.
+
+Two different defects are recorded in this file and they have different fixes. This one is an
+**extraction bug**: one missing regex, fixed once, and then correct forever. The instrument faults
+listed elsewhere are a different class -- each was caught by a control that could fail, never by
+inspection -- and no single fix retires them.
 
 This is also the root of the cascade error recorded below: `CGRect.minX` appears only as
 `type 'CGRect' has no member 'minX'`, never as a missing name, so it read as a downstream effect of
@@ -371,13 +381,21 @@ other record and it disappears from view when that PR merges.
 
 `CGVector` appears nowhere in the demand; do not add it.
 
-### CALayer's members are NOT overlay work
+### CALayer's members are NOT overlay work -- none of the 11
 
-Corrected by measurement, not inherited. `CALayer` is a plain Objective-C `@interface` in Darling's
-QuartzCore, and `allowsEdgeAntialiasing`, `contentsCenter`, `contentsFormat` and `contentsScale` are
-absent from it entirely -- no backing storage, and `contentsScale` must be honoured by CARenderer, so
-no Swift extension can supply them. `isOpaque` fails for a different reason: the header declares
-`@property BOOL opaque;` with no `getter=isOpaque`.
+Corrected by measurement, not inherited, and established for the whole set rather than a sample.
+
+The decisive evidence: the real Apple 5.2.2 `libswiftQuartzCore` x86_64 slice committed in
+darling-swift exports **six symbols, all of them CATransform3D-to-NSValue bridging, and zero CALayer
+members**. There is no Swift overlay surface on CALayer on macOS at all. Every CALayer member reaches
+Swift as an imported Objective-C property or method, or as an api-notes rename of one. So all 11
+missing members are either absent from Darling's `@interface` or present under a different Swift
+name, and both are header-and-implementation work in cocotron's QuartzCore.
+
+Per-member detail for the five probed directly: `allowsEdgeAntialiasing`, `contentsCenter`,
+`contentsFormat` and `contentsScale` are absent from the `@interface` entirely -- no backing storage,
+and `contentsScale` must be honoured by CARenderer. `isOpaque` fails for a different reason: the
+header declares `@property BOOL opaque;` with no `getter=isOpaque`.
 
 The discriminating evidence, in one run: `hidden` FAILS and `isHidden` PASSES, because only the
 latter is declared `@property(getter=isHidden)`; `cornerRadius` passes and a fabricated member fails,
