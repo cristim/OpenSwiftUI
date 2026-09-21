@@ -43,22 +43,25 @@ overlay directory ahead of both:
 
     -Xcc -F <overlay> -Xcc -F <in-tree SDK>      # in that order
 
-> **Frameworks the curated SDK does NOT have get a module map in the overlay.**
-> **Frameworks it already has (Foundation, CoreGraphics) go into the overlay as headers only, with
-> no `Modules/` directory.**
+> **Every framework in the overlay gets a module map, Foundation included.**
+> `Darling/make-framework-modules.sh` writes one per framework with an umbrella header;
+> `Darling/make-foundation-module.sh` writes Foundation's, which needs a *directory* umbrella.
+> CoreGraphics stays headers-only: a module map for it produces `cyclic dependency in module
+> 'CoreGraphics': CoreGraphics -> Foundation -> CoreGraphics`, because Darling's CoreGraphics
+> headers include Foundation's while Apple's do not.
 
-This is a predictive rule, not a preference, and it has two named failure signatures:
+**An earlier version of this rule said Foundation must be headers-only. That was wrong, and it
+cost nine names.** See "The Foundation/AppKit module binding conflict" below: a headers-only
+Foundation is absorbed *textually* into every framework that imports it, so module AppKit ends up
+owning `NSURLSession`, `NSCoder` and the rest, and Swift's Foundation-only import behaviour
+(`Foundation.apinotes`, the NS-prefix renames) never applies to them.
 
-| Break the rule | Symptom |
-|---|---|
-| give CoreGraphics a module map | `cyclic dependency in module 'CoreGraphics': CoreGraphics -> Foundation -> CoreGraphics` |
-| give Foundation a module map | `cannot find interface declaration for 'NSLayoutConstraint'` when importing AppKit |
-
-It also explains an experiment that looked sensible and failed: collapsing to a single framework
-search path regressed AppKit and UniformTypeIdentifiers from clean to broken. The cause was never
-*which* Foundation was found -- the two header sets are the same files -- but whether Foundation
-resolved as a Clang **module** or as textual headers. Both failing configurations had it modular;
-the working one does not.
+The evidence that produced the old rule was real but misread: giving Foundation a module map did
+produce `cannot find interface declaration for 'NSLayoutConstraint'`. The cause is the umbrella,
+not modularity. `Foundation.h` reaches only 152 of the 202 headers; with `umbrella header
+"Foundation.h"` the other 50 (`NSLayoutConstraint.h` and `NSNumber.h` among them) are in the
+framework but in no module, so importing them imports a Foundation that does not declare them.
+A directory umbrella covers all 202 and the diagnostic goes away.
 
 With the rule followed, all nine Clang modules the build needs import cleanly: AppKit, CoreText,
 QuartzCore, COpenSwiftUI, OpenSwiftUI_SPI, UIFoundation_Private, CoreText_Private,
@@ -67,6 +70,99 @@ CoreGraphics_Private and QuartzCore_Private.
 `Darling/probe-clang-modules.sh` re-runs this census in seconds. Re-run it over the **whole** set
 after each change, never just the framework you touched: adding QuartzCore's module map broke AppKit,
 which had been importing fine, by surfacing `CAOpenGLLayer`'s missing `#include <OpenGL/gl.h>`.
+
+## The Foundation/AppKit module binding conflict
+
+**Symptom.** One file, and two of the names go missing:
+
+```swift
+import AppKit
+package import Foundation
+package func q(_ x: URLSession) -> URLSession { x }   // cannot find type 'URLSession' in scope
+package func k(_ x: NSCoder) -> NSCoder { x }         // ... uses an internal type
+```
+
+Drop `import AppKit` and both resolve. Two files, one importing AppKit and one importing
+Foundation, reproduce it across files.
+
+**What the module-loading trace says.** `-Rmodule-loading` plus `-Xcc -Rmodule-build -Xcc
+-Rmodule-import` prints the whole graph; the decisive line is not in the trace but in the module
+file itself:
+
+    clang -cc1 -module-file-info <cache>/AppKit-*.pcm
+      Imports module 'Darwin' ... 'CoreGraphics' ... 'CoreText' ... 'QuartzCore' ... 'OpenGL'
+
+**AppKit does not import Foundation at all.** Its `#import <Foundation/Foundation.h>` finds a
+Foundation.framework with no `Modules/` directory, so Clang inlines the whole header set
+*textually* into module AppKit. The Foundation pcm built afterwards for Swift's own `import
+Foundation` is byte-identical with and without `import AppKit` (same content hash), so the header
+set was never the variable. What changes is **which module owns the declarations**.
+
+Two Swift behaviours are keyed on that owning module, and both switch off when it is AppKit:
+
+- **API notes are per-module.** `Foundation.apinotes` carries the `SwiftName` entries that make
+  `NSURLSession` import as `URLSession`, `NSScanner` as `Scanner`. Clang consults
+  `AppKit.apinotes` for decls in module AppKit, and there is none, so only the `NS`-prefixed
+  spellings exist. Confirmed both ways: with AppKit imported `NSURLSession` and `NSScanner`
+  compile; without it they compile too, and are rejected as *renamed* to the Swift spellings.
+  (This is also why copying `Foundation.apinotes` next to the overlay's headers changed nothing.)
+- **Import access level follows the import that exposes the decl.** Under
+  `InternalImportsByDefault`, `import AppKit` is an internal import. A decl owned by module AppKit
+  is therefore internal even in a file that says `package import Foundation`, which is the
+  `function cannot be declared package because its parameter uses an internal type` on `NSCoder`,
+  `NSNumber`, `NSMutableAttributedString`, `NSUserActivity` and `NSMapTable`.
+
+**The fix** is `Darling/make-foundation-module.sh`: put a *modular* Foundation in the overlay,
+built from the curated SDK's headers (the copy that carries `Foundation.apinotes`), with a
+directory umbrella so all 202 headers are in the module, and two headers excluded because they
+cannot compile at all. AppKit's pcm then lists `Imports module 'Foundation'` and the decls stay
+Foundation's.
+
+Measured on the full 881-file build, sorted file order (the name set moves if the order changes,
+so state it), against the same tree with only the overlay's Foundation swapped and the two module
+maps below added -- **9 distinct names clear and none regress**, 2327 error lines to 2255:
+
+| Cleared | By |
+|---|---|
+| `NSAttributedString`, `NSCoder`, `NSMutableAttributedString`, `NSNumber`, `NSUserActivity`, `Scanner`, `URLSession`, `resourceValues` | the modular Foundation |
+| `CC_SHA1_Update` | the CommonCrypto module map, below |
+
+`NSHashTable` and `NSAttributedString.Key` are **not** part of this. They fail identically with and
+without `import AppKit`, and they are plain SDK gaps: Darling's `NSHashTable.h` declares
+`@interface NSHashTable : NSObject` with no lightweight generics, and nothing maps
+`NSAttributedStringKey` to the nested `NSAttributedString.Key`. `NSUserActivityDelegate` is not
+declared anywhere in Darling's Foundation headers.
+
+### Two Foundation headers that have never compiled
+
+Both are excluded from the module map, which leaves them textual, exactly where they were before.
+Neither bug is new: both headers are unreachable from the `Foundation.h` umbrella, so nothing had
+ever preprocessed them. They belong in darling-foundation, not here.
+
+| Header | Defect |
+|---|---|
+| `NSMutableCharacterSet.h:1` | `#import <Foundation/NSCharactrSet.h>` -- misspelt, no such file |
+| `NSSerializer.h:4` | `duplicate interface definition for class 'NSDeserializer'` |
+
+## Two more modules: CommonCrypto and IOSurface
+
+Both are "present but unnamed": the declarations are in the SDK, nothing declares a module over
+them, so `canImport` is false and the names do not resolve. Neither needs new API.
+
+- **CommonCrypto** (`CC_SHA1_Update`, declared at `usr/include/CommonCrypto/CommonDigest.h:161`).
+  It is in `usr/include`, so it cannot be a framework module; and all 25 of its headers are
+  `exclude header`-ed from the SDK's Darwin module, so it cannot be a Darwin submodule either.
+  `Darling/make-commoncrypto-module.sh` writes a standalone top-level module map over
+  `CommonCrypto/CommonCrypto.h`, passed with `-Xcc -fmodule-map-file=`. `StrongHash.swift` already
+  guards its use with `#if canImport(CommonCrypto)` and imports it, so no source change is needed:
+  `CC_SHA1_Update` clears in the full build.
+- **IOSurface** has an umbrella header, so `Darling/make-framework-modules.sh IOSurface` is enough
+  and the module builds. `IOSurfaceRef` does **not** clear, for two reasons that are outside the
+  module map: `GraphicsImage.swift:24` spells the type with no `import IOSurface`, and Darling's
+  `IOSurfaceRef.h` declares it as a CF-style opaque pointer (`typedef struct __IOSurface *`), so
+  Swift strips the `Ref` and the type is spelled `IOSurface` (`'IOSurfaceRef' has been renamed to
+  'IOSurface'`). Apple's SDK avoids that by backing the typedef with the `IOSurface` ObjC class;
+  Darling declares that class in `IOSurfaceObjC.h`, which its own umbrella does not include.
 
 ## Where the remaining work is: Darling's SDK, not this repo
 
@@ -93,11 +189,13 @@ importing fine: AppKit includes QuartzCore headers, and modularising QuartzCore 
 Modularising a framework can break a framework that already worked, so re-census the whole set after
 each addition rather than only the one just added.
 
-Three cannot be done this way: **CoreUI** and **Accessibility** have no headers in Darling at all,
-and **CommonCrypto** lives in `usr/include`, so it needs a module in the SDK's own
-`usr/include/module.modulemap` rather than a framework module.
+**IOSurface** was added later and needs nothing special: it has an umbrella header.
 
-**None of the three is actually required**, so the module-map route does not terminate here:
+Two cannot be done this way: **CoreUI** and **Accessibility** have no headers in Darling at all.
+**CommonCrypto** also lives in `usr/include` rather than a framework, and has its own script:
+`Darling/make-commoncrypto-module.sh`.
+
+**Neither of the two is actually required**, so the module-map route does not terminate here:
 
 - Every `import CoreUI` is behind `OPENSWIFTUI_LINK_COREUI`, a build flag this build does not set.
 - All three `import Accessibility` sites are self-disabling: two behind `#if canImport(Accessibility)`,
@@ -121,31 +219,10 @@ to this package:
   `Darling/patch-sdk-visionos.py` adds the six missing definitions. This is general SDK work: any
   header using `visionos(...)` is affected.
 - **Two SDKs are on the header search path at once.** `-F` entries are searched before the sysroot's
-  own frameworks, so `#import <Foundation/Foundation.h>` from AppKit resolves to the in-tree SDK's
-  Foundation, not the curated one that carries the module map and API notes. Observed in a
-  diagnostic trace.
-
-  **This is not the cause of the shim-header failures, and collapsing to one search path makes
-  things worse.** Tested: copied the 112 frameworks the curated SDK lacks into one directory and
-  dropped `-F` at the in-tree SDK, so Foundation could only come from the curated copy. The four
-  shim failures were byte-identical, and AppKit and UniformTypeIdentifiers *regressed*
-  (`cannot find interface declaration for 'NSLayoutConstraint'` / `'NSItemProvider'`) having built
-  cleanly before. The two Foundation header sets turn out to be the same files; the curated SDK adds
-  only `Foundation.apinotes`.
-
-  The mechanism turned out to be narrower than "two SDKs", and it is now understood: **AppKit breaks
-  whenever Foundation resolves as a Clang *module* rather than as textual headers.** Both failing
-  configurations had a modular Foundation; the working one does not. So the rule for the overlay
-  directory is:
-
-  > Frameworks the curated SDK does **not** have get a module map. Frameworks it already has
-  > (Foundation, CoreGraphics) go into the overlay as **headers only** -- no `Modules/` directory.
-
-  Giving CoreGraphics a module map produces `cyclic dependency in module 'CoreGraphics': CoreGraphics
-  -> Foundation -> CoreGraphics`, which is why the curated SDK never modularised it. Giving
-  Foundation one produces `cannot find interface declaration for 'NSLayoutConstraint'` in AppKit.
-  With both as headers-only in the overlay and `-F <overlay> -F <in-tree SDK>` in that order, all of
-  AppKit, CoreText, QuartzCore and four of the five private shim modules build.
+  own frameworks, so `#import <Foundation/Foundation.h>` from AppKit resolves to the overlay's
+  Foundation, not the curated one in the sysroot. That is why the overlay's Foundation has to be
+  the modular one: see "The Foundation/AppKit module binding conflict" below. The two header sets
+  are the same files; the curated SDK adds only `Foundation.apinotes`.
 
 Use `Darling/probe-clang-modules.sh` to re-census this. It costs seconds per module against minutes
 for a Swift build, so check the Clang side first.
@@ -409,7 +486,8 @@ with darling-cocotron **#124 at `239faa6c`**, which is open and not an ancestor 
 AppKit Clang module fails with `redefinition of 'NSRectEdge'`. Both states were reproduced, so this
 is a dependency with a commit in it, not a caveat. Re-derive the number if #124 changes or lands.
 
-Trajectory: 103 -> 97 -> 83 -> 75. The SDK header corpus was byte-identical to its source across
+Trajectory: 103 -> 97 -> 83 -> 75 -> **66**, the last step being the nine names above.
+The SDK header corpus was byte-identical to its source across
 that whole span, so the deltas are attributable to the changes made, not to the tree moving.
 
 ### Correction: the CoreGraphics members are NOT a cascade
@@ -441,12 +519,13 @@ five CALayer members (`contentsScale`, `allowsEdgeAntialiasing`, `contentsFormat
 Net effect: 20 names move from "clears for free" to real work. The wall is more real than the
 cascade framing suggested.
 
-### The six unexplained: four mechanisms proposed and disproved
+### The six unexplained: solved
 
-`NSCoder`, `NSNumber`, `NSMutableAttributedString`, `NSUserActivity`, `Scanner`, `URLSession` each
-resolve in isolation, resolve under their own file's exact import set, and still fail in the full
-881-file build. Do not attach a fifth mechanism without evidence; these four were tested and
-disproved:
+`NSCoder`, `NSNumber`, `NSMutableAttributedString`, `NSUserActivity`, `Scanner` and `URLSession`
+were all the same defect: module AppKit owned them, because a headers-only Foundation is absorbed
+textually. See "The Foundation/AppKit module binding conflict" above; all six clear with a modular
+Foundation in the overlay. The four mechanisms below were proposed and disproved on the way, and
+are kept so nobody re-runs them:
 
 1. **Missing from Foundation.** No: each resolves under a plain `import Foundation`.
 2. **Framework re-export.** Files importing only AppKit or QuartzCore do lose Swift Foundation, and
@@ -456,8 +535,9 @@ disproved:
 4. **The file's own import set.** No: rebuilding `Foundation` + `OpenSwiftUI_SPI` +
    `UIFoundation_Private` still resolves `Scanner`, with the control failing in the same run.
 
-One unread clue: `Scanner` and `URLSession` were not failing before the CoreGraphics module landed
-and are after. That is a correlation, not a mechanism.
+One unread clue, still unexplained and no longer worth chasing: `Scanner` and `URLSession` were
+not failing before the CoreGraphics module landed and were after. The mechanism is now known
+independently of it, so the correlation was never needed.
 
 ## Where this run stopped, and why
 
