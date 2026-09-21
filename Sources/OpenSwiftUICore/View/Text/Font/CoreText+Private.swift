@@ -251,6 +251,7 @@ let kCTFontWidthTrait: CFString
 
 // MARK: - CTAdaptiveImageGlyph
 
+#if !OPENSWIFTUI_NO_ADAPTIVE_IMAGE_GLYPH
 @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
 extension CTAdaptiveImageGlyph {
     @_silgen_name("$sSo20CTAdaptiveImageGlyphC8CoreTextE09_adaptivebC014convertingFromAB10Foundation16AttributedStringVACE08AdaptivebC0V_tFZ")
@@ -258,6 +259,7 @@ extension CTAdaptiveImageGlyph {
         convertingFrom adaptiveImageGlyph: AttributedString.AdaptiveImageGlyph
     ) -> CTAdaptiveImageGlyph
 }
+#endif
 
 // MARK: - Attribute Name
 

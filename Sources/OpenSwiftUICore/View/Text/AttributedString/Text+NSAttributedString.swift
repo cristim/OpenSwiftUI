@@ -344,7 +344,7 @@ extension Text.Style {
         if !environment.shouldRedactContent, (scale ?? environment.textScale) == .secondary {
             attributes[._textScale] = _kCTTextScaleSecondary
         }
-        #if canImport(Darwin)
+        #if canImport(Darwin) && !OPENSWIFTUI_NO_ADAPTIVE_IMAGE_GLYPH
         if let adaptiveImageGlyph {
             attributes[.adaptiveImageGlyph] = NSAdaptiveImageGlyph(
                 ctAdaptiveImageGlyph: CTAdaptiveImageGlyph._adaptiveImageGlyph(
