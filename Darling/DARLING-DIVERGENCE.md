@@ -34,6 +34,40 @@ The script does two things:
    with an arm64 slice. None of the symbols AppZapper binds mention Observation, so this is
    ABI-neutral for that binary and removes a third package from the dependency graph.
 
+## The overlay rule (read this before adding a framework)
+
+Darling has two SDKs. `darling/Developer/.../MacOSX.sdk` has 125 frameworks' headers and **no module
+maps at all**. `swift-darling/sdk/MacOSX.sdk` is the Swift-capable one: 17 frameworks, hand-written
+module maps and API notes. Swift can only import what the second declares, so the build puts an
+overlay directory ahead of both:
+
+    -Xcc -F <overlay> -Xcc -F <in-tree SDK>      # in that order
+
+> **Frameworks the curated SDK does NOT have get a module map in the overlay.**
+> **Frameworks it already has (Foundation, CoreGraphics) go into the overlay as headers only, with
+> no `Modules/` directory.**
+
+This is a predictive rule, not a preference, and it has two named failure signatures:
+
+| Break the rule | Symptom |
+|---|---|
+| give CoreGraphics a module map | `cyclic dependency in module 'CoreGraphics': CoreGraphics -> Foundation -> CoreGraphics` |
+| give Foundation a module map | `cannot find interface declaration for 'NSLayoutConstraint'` when importing AppKit |
+
+It also explains an experiment that looked sensible and failed: collapsing to a single framework
+search path regressed AppKit and UniformTypeIdentifiers from clean to broken. The cause was never
+*which* Foundation was found -- the two header sets are the same files -- but whether Foundation
+resolved as a Clang **module** or as textual headers. Both failing configurations had it modular;
+the working one does not.
+
+With the rule followed, all nine Clang modules the build needs import cleanly: AppKit, CoreText,
+QuartzCore, COpenSwiftUI, OpenSwiftUI_SPI, UIFoundation_Private, CoreText_Private,
+CoreGraphics_Private and QuartzCore_Private.
+
+`Darling/probe-clang-modules.sh` re-runs this census in seconds. Re-run it over the **whole** set
+after each change, never just the framework you touched: adding QuartzCore's module map broke AppKit,
+which had been importing fine, by surfacing `CAOpenGLLayer`'s missing `#include <OpenGL/gl.h>`.
+
 ## Where the remaining work is: Darling's SDK, not this repo
 
 Every blocker found so far is a missing **Clang module** or a missing macro in Darling's SDK, not
@@ -131,7 +165,10 @@ Done, and both are general fixes rather than Darling adaptations:
 - **`Shims/CoreGraphics/CoreGraphics_Private.h:15`** wrote `float cg_nullable *headroom`. The
   qualifier belongs after the `*`; before it, clang rejects it as applying to the pointee. Line 18 of
   the same file already has it the right way round, so this is a typo, and it is wrong on any
-  toolchain with a real `cg_nullable`, not only on Darling.
+  toolchain with a real `cg_nullable`, not only on Darling. **Upstreamable, not yet offered:** no PR
+  has been opened against OpenSwiftUI. Filing into a third party's repository is an outward-facing
+  action on someone else's project and is the repository owner's call to make, not something to do
+  as a side effect of a build fix. The write-up is here so it is ready if that call is yes.
 - **`Shims/QuartzCore/CAFilterPrivate.h`** declared `@interface CAFilter` unconditionally. It is
   private on Apple's platforms, which is why the shim declares it, but **Darling's QuartzCore exposes
   it publicly** in `QuartzCore/CAFilter.h`, and redeclaring it there is a hard error. Guarded on
@@ -139,14 +176,57 @@ Done, and both are general fixes rather than Darling adaptations:
   plainly because it reads as a Darling bug and is not one: Darling is being *more* generous than
   Apple here, and the shim assumed Apple's privacy.
 
-Still open, in this package's own private shims:
+- **`Shims/QuartzCore/CoreAnimation_Private.h` and `.m`** declare a category on `CADisplayLink`,
+  a class Darling's QuartzCore does not have, so the category has nothing to attach to and the whole
+  module fails. Gated on `OPENSWIFTUI_NO_CADISPLAYLINK`. Darling adaptation, and the *only* Swift
+  caller (`UIHostingViewBase.swift:905`) is on the UIKit path, which this build does not compile.
 
-| Header | Problem |
-|---|---|
-| `Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSAttributedString.h:59` | `NSAttributedStringFormattingOptions` is not declared in Darling's Foundation. |
-| `Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSStringDrawing.h:44` | `NSAttributedStringKey` is not declared in Darling's Foundation. |
-| `Sources/OpenSwiftUI_SPI/Shims/CoreGraphics/CoreGraphics_Private.h:15` | `cg_nullable` is undefined in Darling's CoreGraphics headers. |
-| `Sources/OpenSwiftUI_SPI/Shims/QuartzCore/` | `duplicate interface definition for class 'CAFilter'`. |
+### `CAFilter` and `CADisplayLink` look like the same problem and are not
+
+Both are "a declaration that clashes with, or is missing from, Darling's QuartzCore", and they get
+different constructs on purpose:
+
+- `CAFilter` -> `#if !__has_include(<QuartzCore/CAFilter.h>)`. The predicate asks about a header
+  **Darling demonstrably ships** and that can be checked right here. It is a statement about the SDK
+  in hand.
+- `CADisplayLink` -> an explicit build flag. `__has_include(<QuartzCore/CADisplayLink.h>)` would be a
+  **guess about Apple's header layout**, which nobody here can check without a mounted macOS volume.
+  Guess wrong and the category silently disappears on Apple, where nothing traces the loss back. The
+  flag fails the other way: always compiled on Apple, explicitly off on Darling, and greppable.
+
+Same construct, different epistemic footing. Narrow the flag to `__has_include` once someone can
+check the spelling against a real SDK; the comment in the header says so.
+
+### One symptom was two independent defects
+
+`cg_nullable` produced a single error, and it had **two** causes that would each have produced it:
+the macro was missing from Darling's `CGBase.h`, *and* this package placed the qualifier on the wrong
+side of the `*`. Fixing only the SDK would have left an error that looked exactly like the fix had
+not worked, and the natural next move -- doubting the SDK fix -- would have been wrong. When a fix
+does not move a symptom, consider that the symptom has more than one cause before assuming the fix
+failed.
+
+### The SDK side: five gaps, all filed as separate PRs
+
+Every one of these is a declaration Darling's SDK lacks that a recent-SDK header needs. None is
+specific to this package, each was reproduced minimally before filing, and none changes anything
+already in the Darling tree, because nothing there uses them.
+
+| Gap | Repo | PR |
+|---|---|---|
+| `visionos` unknown to the availability macros | darling | #101 |
+| `NS_HEADER_AUDIT_BEGIN` / `_END` | darling-foundation | #35 |
+| `NSAttributedStringKey`, `NSAttributedStringFormattingOptions` | darling-foundation | #36 |
+| `cg_nullable` | darling-cocotron | #121 |
+| `CA_EXTERN`, `CALayerContentsFormat`, `CALayerContentsFilter` | darling-cocotron | #122 |
+
+`NSAttributedStringFormattingOptions` is declared with **no members, deliberately**: its bit values
+are not publicly derivable, and a fabricated bit would compile cleanly and then misformat at runtime,
+whereas nothing declared makes any use of an option a compile error naming the option. See #36 for
+the full reasoning, including why it is a plain typedef (a memberless `NS_OPTIONS` is not legal C).
+
+One SDK gap is **not** filed: `CADisplayLink` is a missing *class*, not a macro or typedef, and
+stubbing it would be inventing API surface. It is handled fork-side instead, above.
 
 ### `NSText.h:27` -- root-caused, and it was not the macro it looked like
 
