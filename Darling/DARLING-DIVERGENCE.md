@@ -99,9 +99,19 @@ to this package:
   cleanly before. The two Foundation header sets turn out to be the same files; the curated SDK adds
   only `Foundation.apinotes`.
 
-  So "merge the headers into one SDK" is an untested recommendation that the one experiment run
-  against it contradicts. The working configuration is `-F <sdkext> -F <in-tree SDK>` in that order.
-  Whatever the module set is sensitive to, it is header search order, not a duplicated Foundation.
+  The mechanism turned out to be narrower than "two SDKs", and it is now understood: **AppKit breaks
+  whenever Foundation resolves as a Clang *module* rather than as textual headers.** Both failing
+  configurations had a modular Foundation; the working one does not. So the rule for the overlay
+  directory is:
+
+  > Frameworks the curated SDK does **not** have get a module map. Frameworks it already has
+  > (Foundation, CoreGraphics) go into the overlay as **headers only** -- no `Modules/` directory.
+
+  Giving CoreGraphics a module map produces `cyclic dependency in module 'CoreGraphics': CoreGraphics
+  -> Foundation -> CoreGraphics`, which is why the curated SDK never modularised it. Giving
+  Foundation one produces `cannot find interface declaration for 'NSLayoutConstraint'` in AppKit.
+  With both as headers-only in the overlay and `-F <overlay> -F <in-tree SDK>` in that order, all of
+  AppKit, CoreText, QuartzCore and four of the five private shim modules build.
 
 Use `Darling/probe-clang-modules.sh` to re-census this. It costs seconds per module against minutes
 for a Swift build, so check the Clang side first.
@@ -116,7 +126,20 @@ Done: the adaptive image glyph feature (macOS 15 Genmoji) is gated on
 Clang-only gate leaves the Swift use site dangling: the two shim headers, the `CTAdaptiveImageGlyph`
 extension in `CoreText+Private.swift`, and the use site in `Text+NSAttributedString.swift`.
 
-Still open, all in this package's own private shims:
+Done, and both are general fixes rather than Darling adaptations:
+
+- **`Shims/CoreGraphics/CoreGraphics_Private.h:15`** wrote `float cg_nullable *headroom`. The
+  qualifier belongs after the `*`; before it, clang rejects it as applying to the pointee. Line 18 of
+  the same file already has it the right way round, so this is a typo, and it is wrong on any
+  toolchain with a real `cg_nullable`, not only on Darling.
+- **`Shims/QuartzCore/CAFilterPrivate.h`** declared `@interface CAFilter` unconditionally. It is
+  private on Apple's platforms, which is why the shim declares it, but **Darling's QuartzCore exposes
+  it publicly** in `QuartzCore/CAFilter.h`, and redeclaring it there is a hard error. Guarded on
+  `!__has_include(<QuartzCore/CAFilter.h>)`, which needs no Darling-specific flag. Worth saying
+  plainly because it reads as a Darling bug and is not one: Darling is being *more* generous than
+  Apple here, and the shim assumed Apple's privacy.
+
+Still open, in this package's own private shims:
 
 | Header | Problem |
 |---|---|
