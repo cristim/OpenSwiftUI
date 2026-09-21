@@ -49,13 +49,41 @@ over the 234 AppKit headers, plus `-F` at the first SDK for the headers AppKit i
 AppKit Clang module cleanly. Only `-Wno-undef-prefix` is needed: Darling's SDK does not define
 `TARGET_OS_WASI`, and `-Wundef-prefix=TARGET_OS_` is an error by default.
 
-Still missing the same way, each needing the same treatment: **CoreText, QuartzCore, CoreUI,
-Accessibility, ImageIO, CommonCrypto, UniformTypeIdentifiers**.
+`Darling/make-framework-modules.sh` does this for any framework whose headers carry an umbrella.
+Done and verified importable: **AppKit, CoreText, QuartzCore, ImageIO, UniformTypeIdentifiers,
+OpenGL**.
+
+OpenGL was not on the original list. Adding QuartzCore's module map *broke* AppKit, which had been
+importing fine: AppKit includes QuartzCore headers, and modularising QuartzCore surfaced
+`CAOpenGLLayer`'s missing `#include <OpenGL/gl.h>`. Giving OpenGL a module map too fixed both.
+Modularising a framework can break a framework that already worked, so re-census the whole set after
+each addition rather than only the one just added.
+
+Three cannot be done this way: **CoreUI** and **Accessibility** have no headers in Darling at all,
+and **CommonCrypto** lives in `usr/include`, so it needs a module in the SDK's own
+`usr/include/module.modulemap` rather than a framework module.
 
 Also in the SDK: `module Darwin` declares no `os` submodule, so `Darwin.os.lock` does not resolve and
 `import Observation` fails. `os/lock.h` is present; only the declaration is missing. A separate module
 map cannot add it (`parent module must be defined before the submodule`) -- it has to go in the SDK's
 own `usr/include/module.modulemap`, which `tools/gen-darwin-module.sh` generates.
+
+Two SDK-wide macro gaps, both hit by ordinary modern Apple headers rather than by anything specific
+to this package:
+
+- **visionOS is unknown to the availability macros.** `AvailabilityInternal.h` defines
+  `__API_{AVAILABLE,DEPRECATED,UNAVAILABLE}_PLATFORM_*` for macos, ios, watchos, tvos, bridgeos,
+  macCatalyst, uikitformac, driverkit and iosmac, and for nothing else, so
+  `API_AVAILABLE(..., visionos(1.0))` does not expand and fails to parse.
+  `Darling/patch-sdk-visionos.py` adds the six missing definitions. This is general SDK work: any
+  header using `visionos(...)` is affected.
+- **Two SDKs are on the header search path at once, and the wrong Foundation wins.** `-F` entries are
+  searched before the sysroot's own frameworks, so `#import <Foundation/Foundation.h>` from AppKit
+  resolves to the in-tree SDK's Foundation (203 headers), not the curated one that carries the module
+  map and API notes (202 headers). Observed in a diagnostic trace, not inferred. This is the
+  CryptoKit Foundation trap one level down: the compile is clean and only the ABI or the module
+  contents differ. The durable fix is to merge the framework headers into the curated SDK rather than
+  stacking two SDKs with `-F`.
 
 Use `Darling/probe-clang-modules.sh` to re-census this. It costs seconds per module against minutes
 for a Swift build, so check the Clang side first.
@@ -64,12 +92,20 @@ for a Swift build, so check the Clang side first.
 
 Found by the module census, not yet applied. All are Darling adaptations.
 
+Done: the adaptive image glyph feature (macOS 15 Genmoji) is gated on
+`OPENSWIFTUI_NO_ADAPTIVE_IMAGE_GLYPH`, defined for both Clang and Swift. It needs
+`<CoreText/CTRunDelegate.h>`, which does not exist anywhere in Darling. Four sites, because a
+Clang-only gate leaves the Swift use site dangling: the two shim headers, the `CTAdaptiveImageGlyph`
+extension in `CoreText+Private.swift`, and the use site in `Text+NSAttributedString.swift`.
+
+Still open, all in this package's own private shims:
+
 | Header | Problem |
 |---|---|
-| `Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSAdaptiveImageGlyph.h` | imports `<CoreText/CTRunDelegate.h>`, which does not exist anywhere in Darling. Its one Swift use site is `Text+NSAttributedString.swift:349`; both need the same gate. |
-| `Sources/OpenSwiftUI_SPI/Shims/CoreText/Private/CTAdaptiveImageGlyph.h` | `API_AVAILABLE(... visionos(2.0))` does not parse; Darling's `Availability.h` has no `visionos`. |
-| `Sources/OpenSwiftUI_SPI/Shims/CoreGraphics/CoreGraphics_Private.h` | `cg_nullable` is undefined in Darling's CoreGraphics headers. |
-| `Sources/OpenSwiftUI_SPI/Shims/QuartzCore/...` | `duplicate interface definition for class 'CAFilter'`. |
+| `Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSText.h:27` | `typedef NS_ENUM(NSInteger, NSWritingDirection)` fails with `invalid storage class specifier in function declarator`. **Not root-caused.** `NS_ENUM` is defined and reachable in both SDKs (`NSObjCRuntime.h:251`), so the obvious explanation is wrong; do not assume it is a missing macro. |
+| `Sources/OpenSwiftUI_SPI/Shims/UIFoundation/NSAttributedString.h:59` | `NSAttributedStringFormattingOptions` is not declared in Darling's Foundation. |
+| `Sources/OpenSwiftUI_SPI/Shims/CoreGraphics/CoreGraphics_Private.h:15` | `cg_nullable` is undefined in Darling's CoreGraphics headers. |
+| `Sources/OpenSwiftUI_SPI/Shims/QuartzCore/` | `duplicate interface definition for class 'CAFilter'`. |
 
 ## Build settings
 
@@ -90,6 +126,18 @@ Found by the module census, not yet applied. All are Darling adaptations.
 **Compile against Darling's Foundation overlay, never Linux FoundationEssentials.** Any signature
 mentioning a Foundation protocol mangles the module name into the symbol, and the compile and the link
 are both clean when it is wrong; only dyld notices.
+
+## Checked and clear: the canImport self-import trap
+
+Compiling sources as module `SwiftUI` makes `#if canImport(SwiftUI)` true inside those sources, which
+silently collapses a guarded file to `@_exported import SwiftUI` and produces a module that
+re-exports itself. It is invisible to the compiler and invisible at load, and shows up only in a
+symbol diff. swift-crypto hit exactly this with all 91 of its `canImport(CryptoKit)` files.
+
+`Sources/OpenSwiftUI` and `Sources/OpenSwiftUICore` contain **zero** occurrences of
+`canImport(SwiftUI)`, so this build is not affected. The three in the repo are in
+`OpenSwiftUIBridge` and `OpenSwiftUIExtension`, which are not compiled here. Re-check this if either
+target is ever added to the staged set; the fix is an extra build-flag term in each guard.
 
 ## Not measured yet
 

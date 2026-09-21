@@ -6,7 +6,7 @@
 
 #import "OpenSwiftUIBase.h"
 
-#if OPENSWIFTUI_TARGET_OS_DARWIN
+#if OPENSWIFTUI_TARGET_OS_DARWIN && !OPENSWIFTUI_NO_ADAPTIVE_IMAGE_GLYPH
 
 // Modified based on macOS 26.2 SDK and iOS 18.5/26.2 SDKs. Keep the
 // declarations aligned with AppKit and UIKit because clients can import both

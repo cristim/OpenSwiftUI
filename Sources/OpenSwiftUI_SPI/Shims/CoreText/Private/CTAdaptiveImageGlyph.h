@@ -6,7 +6,7 @@
 
 #include "OpenSwiftUIBase.h"
 
-#if OPENSWIFTUI_TARGET_OS_DARWIN && __has_include(<CoreText/CoreText.h>)
+#if OPENSWIFTUI_TARGET_OS_DARWIN && __has_include(<CoreText/CoreText.h>) && !OPENSWIFTUI_NO_ADAPTIVE_IMAGE_GLYPH
 
 #import <CoreText/CoreText.h>
 #import <Foundation/Foundation.h>
