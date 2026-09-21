@@ -13,8 +13,10 @@ SRC, DST = sys.argv[1], sys.argv[2]
 IMPORT = re.compile(r'^\s*(?:@_spi\([^)]*\)\s*)*(?:package|public|internal|fileprivate|private)?\s*import\s+OpenSwiftUICore\s*$')
 ATTR = re.compile(r'^\s*@_spi\([^)]*\)\s*$')
 # Apple's own Observation module is the ABI-correct source of Observable and
-# ObservationRegistrar; OpenObservation is only its open-source twin.
-OBS = re.compile(r'(^\s*(?:@_spi\([^)]*\)\s*)*(?:package|public|internal|fileprivate|private)?\s*import\s+)OpenObservation\s*$')
+# ObservationRegistrar; OpenObservation is only its open-source twin. ObservationTracking
+# and _AccessList live behind @_spi(SwiftUI) there, so the import needs that SPI group or
+# they resolve as "cannot find type" despite being present.
+OBS = re.compile(r'^\s*(?:@_spi\([^)]*\)\s*)*(?:package|public|internal|fileprivate|private)?\s*import\s+OpenObservation\s*$')
 # Both targets become one module named SwiftUI, so a reference qualified by either target's
 # module name (OpenSwiftUI.Binding, OpenSwiftUICore.Text) no longer resolves. Requalify them.
 # The lookbehind keeps OpenSwiftUICore.X from also matching the OpenSwiftUI.X pattern, and
@@ -40,9 +42,8 @@ for target in ('OpenSwiftUICore', 'OpenSwiftUI'):
                         out.pop()
                     stripped += 1
                     continue
-                m = OBS.match(line)
-                if m:
-                    line = m.group(1) + 'Observation'
+                if OBS.match(line):
+                    line = '@_spi(SwiftUI) import Observation'
                     swapped += 1
                 line, n = QUAL.subn('SwiftUI.', line)
                 requalified += n
