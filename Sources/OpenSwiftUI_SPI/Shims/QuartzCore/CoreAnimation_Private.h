@@ -30,6 +30,13 @@ typedef struct CAColorMatrix CAColorMatrix;
 }
 @end
 
+// Darling's QuartzCore has no CADisplayLink, so this category has nothing to attach to and the
+// whole module fails to build. Gated on an explicit flag rather than
+// __has_include(<QuartzCore/CADisplayLink.h>): that predicate is a guess about Apple's header
+// layout, and guessing wrong would silently drop the category on Apple, where nothing would trace
+// the loss back here. A flag is greppable and fails the other way. Narrow this to __has_include
+// once someone can check the spelling against a real macOS SDK.
+#if !OPENSWIFTUI_NO_CADISPLAYLINK
 @interface CADisplayLink (OpenSwiftUI_SPI)
 
 + (instancetype)displayLinkWithDisplay_openswiftui_safe_wrapper:(CADisplay *)display target:(id)target selector:(SEL)selector OPENSWIFTUI_SWIFT_NAME(init(display:target:selector:));
@@ -38,6 +45,7 @@ typedef struct CAColorMatrix CAColorMatrix;
 
 - (void)setHighFrameRateReasons_openswiftui_safe_wrapper:(const uint32_t *)reasons count:(NSInteger)count OPENSWIFTUI_SWIFT_NAME(setHighFrameRateReasons(_:count:));
 @end
+#endif
 
 // MARK: - CATransaction (Private)
 

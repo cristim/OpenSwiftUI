@@ -16,6 +16,7 @@
 }
 @end
 
+#if !OPENSWIFTUI_NO_CADISPLAYLINK
 @implementation CADisplayLink (OpenSwiftUI_SPI)
 
 + (instancetype)displayLinkWithDisplay_openswiftui_safe_wrapper:(CADisplay *)display target:(id)target selector:(SEL)targetSelector {
@@ -33,5 +34,6 @@
     return func(self, selector, reasons, count);
 }
 @end
+#endif
 
 #endif /* CoreAnimation.h */
