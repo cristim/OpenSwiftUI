@@ -1,0 +1,6 @@
+// SwiftPM synthesizes this for a target with publicHeadersPath ".". Out of tree
+// the module map has to be written by hand.
+module COpenSwiftUI {
+    umbrella "../Sources/COpenSwiftUI"
+    export *
+}
