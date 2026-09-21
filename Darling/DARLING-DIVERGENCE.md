@@ -336,6 +336,85 @@ Done, and both are general fixes rather than Darling adaptations:
   module fails. Gated on `OPENSWIFTUI_NO_CADISPLAYLINK`. Darling adaptation, and the *only* Swift
   caller (`UIHostingViewBase.swift:905`) is on the UIKit path, which this build does not compile.
 
+### The NSTextAttachment ODR clash, applied as a build-time patch
+
+`NSTextAttachment`, `NSTextTab`, `NSParagraphStyle` and `NSMutableParagraphStyle` are declared both
+by `Shims/UIFoundation` and by Darling's AppKit, and clang compares the **whole interface**, not the
+name, so the two definitions clash:
+
+    NSTextTab.h:35:13: error: 'NSTextTab::_location' from module 'AppKit.NSTextTab'
+      is not present in definition of 'NSTextTab' in module 'UIFoundation_Private'
+
+Not a cocotron regression: the three AppKit headers are byte-identical between the stale snapshot
+and master, with 30 other AppKit headers differing as a control. And moving cocotron's 18 public
+ivars is necessary but **not sufficient**, because a property-versus-getter shape difference still
+clashes, so cocotron can never match Apple's headers byte for byte. The fix therefore belongs here.
+
+**It lives in `Darling/patches/`, not in `Sources/`.** `Darling/stage-spi.sh <staging dir>` copies
+`Sources/OpenSwiftUI_SPI` and applies every patch in `Darling/patches/` to the copy; the build then
+points at the staged copy instead of at `Sources/`:
+
+    Darling/stage-spi.sh "$STAGE"
+    -Xcc -I$STAGE/Sources/OpenSwiftUI_SPI
+    -Xcc -fmodule-map-file=$STAGE/Sources/OpenSwiftUI_SPI/module.modulemap
+
+Same reason `stage-as-swiftui.py` rewrites imports into a staging tree rather than editing files in
+place: a new upstream release stays a `git rebase` instead of a conflict, and the Darling-only
+header changes stay legible as one diff rather than dissolving into the vendored headers. The cost
+is that the headers the compiler sees are no longer the headers in the tree, so a build that forgets
+the `-I` silently gets the unpatched ones - which is what the clash diagnostic above looks like.
+
+The script applies with `-F0` (no fuzz) and removes the staged copy if any hunk fails, so a patch
+whose context has drifted stops the build instead of half-applying. Verified by drifting one context
+line in a throwaway copy: exit 1, and no staged tree left behind.
+
+What the patch does, per header:
+
+- Each redeclaration is wrapped in `#if !__has_include(<AppKit/...>)`, with an `#import` of AppKit's
+  header in the other arm, because the `(OpenSwiftUI_SPI)` categories need the class to exist.
+- **`NSMutableParagraphStyle` gets no import of its own.** Apple's AppKit has no
+  `<AppKit/NSMutableParagraphStyle.h>`; the class is declared inside `NSParagraphStyle.h`. Importing
+  it under `__has_include(<AppKit/NSParagraphStyle.h>)` would be a file-not-found on a real SDK,
+  which is precisely the platform this guard is being trusted on. On Darling it is redundant anyway:
+  cocotron's `AppKit/NSParagraphStyle.h` imports `NSMutableParagraphStyle.h` itself.
+- **The import has to sit outside `NS_HEADER_AUDIT_BEGIN.`** Inside one, clang refuses it with
+  `cannot #include files inside '#pragma clang assume_nonnull'`, and the unbalanced pragma then
+  produces a second, unrelated-looking error at the end of the file.
+- **`NSLineBreakMode` is guarded too.** AppKit declares it as well, and once AppKit's header is in
+  this module two visible declarations are `reference to 'NSLineBreakMode' is ambiguous` - an
+  ambiguity, not a clash, and a different diagnostic. `NSLineBreakStrategy` beside it is **not**
+  guarded: AppKit does not declare it.
+
+Measured with a two-module Swift probe (`import AppKit` + `import UIFoundation_Private`, then a
+function mentioning each of the four types, which is what forces clang to compare the definitions -
+importing both modules and stopping there does **not** reproduce it):
+
+| | exit | errors |
+|---|---|---|
+| `Sources/` as it stands | 1 | 4, all ODR |
+| staged copy, patch applied | 0 | 0 |
+
+Controls both ways in the same runs: the same file without `import AppKit` compiles in both, and a
+fabricated type name fails in both. The single-module census (`UIFoundation_Private`,
+`OpenSwiftUI_SPI`) is `OK` against the staged copy, with a nonexistent module name failing beside it.
+
+**Residue, to report rather than chase.** Taking AppKit's smaller classes leaves 8 ordinary
+missing members, all header-and-implementation work in cocotron's AppKit, not here:
+
+| type | members |
+|---|---|
+| `NSTextAttachment` | `bounds`, `contents`, `fileType`, `image`, `lineLayoutPadding` |
+| `NSMutableParagraphStyle` | `allowsDefaultTighteningForTruncation`, `lineBreakStrategy`, `usesDefaultHyphenation` |
+
+`NSTextTab.location` and `.options` resolve, as do the other paragraph-style members used here.
+
+**One caveat, stated because the section below draws exactly this distinction.** Unlike `CAFilter`,
+where `<QuartzCore/CAFilter.h>` exists only on Darling, **Apple's AppKit ships all three of these
+headers too**, so the predicate is true on macOS as well. Being a patch rather than a source edit
+takes most of the sting out of that: nothing changes for anyone who does not run `stage-spi.sh`.
+It still was not checked against a real SDK, which by the rule below is the `CADisplayLink`
+situation rather than the `CAFilter` one.
+
 ### `CAFilter` and `CADisplayLink` look like the same problem and are not
 
 Both are "a declaration that clashes with, or is missing from, Darling's QuartzCore", and they get
