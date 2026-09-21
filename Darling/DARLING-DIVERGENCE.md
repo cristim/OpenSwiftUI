@@ -368,6 +368,12 @@ The script applies with `-F0` (no fuzz) and removes the staged copy if any hunk 
 whose context has drifted stops the build instead of half-applying. Verified by drifting one context
 line in a throwaway copy: exit 1, and no staged tree left behind.
 
+`probe-clang-modules.sh` stages the same way, so the census measures the headers the build compiles
+rather than the pristine ones. It also takes `EXTRA_CFLAGS` now: without the package's own `-D`
+gates it cannot reach `UIFoundation_Private` or `OpenSwiftUI_SPI` at all, and reports
+`'CoreText/CTRunDelegate.h' file not found` for both, which reads as a header gap rather than as a
+missing flag. With them, both are `OK`.
+
 What the patch does, per header:
 
 - Each redeclaration is wrapped in `#if !__has_include(<AppKit/...>)`, with an `#import` of AppKit's
