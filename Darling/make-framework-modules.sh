@@ -19,12 +19,26 @@ for f in "$@"; do
 	rm -rf "$OUT/$f.framework"
 	mkdir -p "$OUT/$f.framework/Headers" "$OUT/$f.framework/Modules"
 	cp -a "$src/." "$OUT/$f.framework/Headers/"
-	cat > "$OUT/$f.framework/Modules/module.modulemap" <<MM
+	if [ "$f" = OpenGL ]; then
+		# gl.h includes glext.h inside extern "C". Keep the extension headers textual;
+		# importing them as implicit C++ submodules fails in Swift C++ interop builds.
+		cat > "$OUT/$f.framework/Modules/module.modulemap" <<'MM'
+framework module OpenGL {
+  umbrella header "OpenGL.h"
+  textual header "CGLInternal.h"
+  textual header "glext.h"
+  textual header "internal/khrplatform.h"
+  export *
+}
+MM
+	else
+		cat > "$OUT/$f.framework/Modules/module.modulemap" <<MM
 framework module $f {
   umbrella header "$f.h"
   export *
   module * { export * }
 }
 MM
+	fi
 	echo "$f: $(ls "$OUT/$f.framework/Headers" | wc -l) headers"
 done
