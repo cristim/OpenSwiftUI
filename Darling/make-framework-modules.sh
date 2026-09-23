@@ -4,11 +4,16 @@
 # swift-darling's SDK has the module maps but only 17 frameworks. This bridges
 # the two: an umbrella-header framework module per framework, built over the
 # in-tree headers, searched ahead of them with -F.
+# If COCOTRON_ROOT is set, prefer its current headers for Cocotron frameworks.
+# This avoids compiling against an older SDK snapshot after a Cocotron update.
 set -eu
 : "${DARLING_SDK_HEADERS:?in-tree MacOSX.sdk with framework Headers}" "${OUT:?destination .../System/Library/Frameworks}"
 D=$DARLING_SDK_HEADERS
 for f in "$@"; do
 	src=$D/System/Library/Frameworks/$f.framework/Headers
+	if [ -n "${COCOTRON_ROOT:-}" ] && [ -f "$COCOTRON_ROOT/$f/include/$f/$f.h" ]; then
+		src=$COCOTRON_ROOT/$f/include/$f
+	fi
 	[ -d "$src" ] || { echo "$f: no headers, skipped"; continue; }
 	[ -f "$src/$f.h" ] || { echo "$f: no umbrella header, skipped"; continue; }
 	rm -rf "$OUT/$f.framework"
