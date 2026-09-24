@@ -14,6 +14,8 @@ package import OpenAttributeGraphShims
 @available(OpenSwiftUI_v1_0, *)
 @frozen
 public struct _PreferenceWritingModifier<Key>: ViewModifier, MultiViewModifier, PrimitiveViewModifier where Key: PreferenceKey {
+    // Also the _SceneModifier witness; inference fails when both conformances are in one module.
+    public typealias Body = Never
 
     /// The value to return for `Key`
     public var value: Key.Value
