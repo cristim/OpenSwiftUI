@@ -69,7 +69,7 @@ extension View {
 
 // MARK: - ContentShapeData
 
-private struct ContentShapeData<ContentShape>: ContentResponder where ContentShape: Shape {
+struct ContentShapeData<ContentShape>: ContentResponder where ContentShape: Shape {
     var shape: ContentShape
     var eoFill: Bool
 
