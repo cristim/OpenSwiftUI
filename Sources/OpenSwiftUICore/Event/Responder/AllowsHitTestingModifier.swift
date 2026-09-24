@@ -78,9 +78,7 @@ private final class AllowsHitTestingResponder: DefaultLayoutViewResponder {
         observer: (any ContentPathObserver)?
     ) {
         guard isEnabled || kind != .interaction else {
-            // Still register the observer, so it hears when hit testing is re-enabled.
-            var ignored = Path()
-            super.addContentPath(to: &ignored, kind: kind, in: space, observer: observer)
+            if let observer { addObserver(observer) }
             return
         }
         super.addContentPath(to: &path, kind: kind, in: space, observer: observer)
