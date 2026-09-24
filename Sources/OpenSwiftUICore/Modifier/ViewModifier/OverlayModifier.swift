@@ -20,10 +20,35 @@ package func makeSecondaryLayerView<SecondaryLayer>(
     var inputs = inputs
     inputs.base.pushStableIndex(0)
     let primaryOutputs = body(_Graph(), inputs)
-    let layoutDirection = inputs.layoutDirection
+    let secondaryOutputs = makeSecondaryLayer(
+        secondaryLayer: secondaryLayer,
+        alignment: alignment,
+        primaryOutputs: primaryOutputs,
+        inputs: inputs
+    )
+    var visitor = PairwisePreferenceCombinerVisitor(
+        outputs: flipOrder ? (secondaryOutputs, primaryOutputs) : (primaryOutputs, secondaryOutputs)
+    )
+    for key in inputs.preferences.keys {
+        key.visitKey(&visitor)
+    }
+    var result = visitor.result
+    result.layoutComputer = primaryOutputs.layoutComputer
+    return result
+}
+
+/// Makes `secondaryLayer` sized and aligned against the primary view that
+/// `inputs` and `primaryOutputs` describe.
+package func makeSecondaryLayer<SecondaryLayer>(
+    secondaryLayer: Attribute<SecondaryLayer>,
+    alignment: Attribute<Alignment>?,
+    primaryOutputs: _ViewOutputs,
+    inputs: _ViewInputs
+) -> _ViewOutputs where SecondaryLayer: View {
+    var inputs = inputs
     let geometry = Attribute(SecondaryLayerGeometryQuery(
         alignment: .init(alignment),
-        layoutDirection: layoutDirection,
+        layoutDirection: inputs.layoutDirection,
         primaryPosition: inputs.position,
         primarySize: inputs.size,
         primaryLayoutComputer: .init(primaryOutputs.layoutComputer),
@@ -39,15 +64,7 @@ package func makeSecondaryLayerView<SecondaryLayer>(
     geometry.mutateBody(as: SecondaryLayerGeometryQuery.self, invalidating: true) { query in
         query.$secondaryLayoutComputer = secondaryOutputs.layoutComputer
     }
-    var visitor = PairwisePreferenceCombinerVisitor(
-        outputs: flipOrder ? (secondaryOutputs, primaryOutputs) : (primaryOutputs, secondaryOutputs)
-    )
-    for key in inputs.preferences.keys {
-        key.visitKey(&visitor)
-    }
-    var result = visitor.result
-    result.layoutComputer = primaryOutputs.layoutComputer
-    return result
+    return secondaryOutputs
 }
 
 // MARK: - OverlayModifier
