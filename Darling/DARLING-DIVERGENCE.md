@@ -527,6 +527,8 @@ not about line N.** Two plausible hypotheses about the named macro were both wro
 
     -target arm64-apple-macosx26.0 -swift-version 5 -parse-as-library
     -module-name SwiftUI -enable-library-evolution
+    -D OPENSWIFTUI_SWIFTUI_ABI -Xcc -DOPENSWIFTUI_SWIFTUI_ABI=1   # hand-written mangled names use SwiftUI;
+                                               # also clang -DOPENSWIFTUI_SWIFTUI_ABI=1 for COpenSwiftUI and OpenSwiftUI_SPI
     -enable-experimental-feature AvailabilityMacro=<each macro in Package.swift>
     -I <OpenAttributeGraph modules>            # OpenAttributeGraph, OpenAttributeGraphShims
     -I <OpenObservation modules>               # OpenObservation, linked statically into the framework

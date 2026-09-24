@@ -13,57 +13,57 @@ void _OpenSwiftUI_callVisitViewType(void *visitor_value,
                                     const void *view_pwt);
 
 OPENSWIFTUI_EXPORT
-const void *$s11OpenSwiftUI4ViewMp;
+const void *OPENSWIFTUI_MANGLED(4ViewMp);
 
 const void *_OpenSwiftUI_viewProtocolDescriptor(void) {
-    return &$s11OpenSwiftUI4ViewMp;
+    return &OPENSWIFTUI_MANGLED(4ViewMp);
 }
 
 OPENSWIFTUI_EXPORT
-const void *$s11OpenSwiftUI12ViewModifierMp;
+const void *OPENSWIFTUI_MANGLED(12ViewModifierMp);
 
 const void *_OpenSwiftUI_viewModifierProtocolDescriptor(void) {
-    return &$s11OpenSwiftUI12ViewModifierMp;
+    return &OPENSWIFTUI_MANGLED(12ViewModifierMp);
 }
 
 OPENSWIFTUI_EXPORT
-const void *$s11OpenSwiftUI7GestureMp;
+const void *OPENSWIFTUI_MANGLED(7GestureMp);
 
 const void *_OpenSwiftUI_gestureProtocolDescriptor(void) {
-    return &$s11OpenSwiftUI7GestureMp;
+    return &OPENSWIFTUI_MANGLED(7GestureMp);
 }
 
 OPENSWIFTUI_EXPORT
-const void *$s11OpenSwiftUI15GestureModifierMp;
+const void *OPENSWIFTUI_MANGLED(15GestureModifierMp);
 
 const void *_OpenSwiftUI_gestureModifierProtocolDescriptor(void) {
-    return &$s11OpenSwiftUI15GestureModifierMp;
+    return &OPENSWIFTUI_MANGLED(15GestureModifierMp);
 }
 
 OPENSWIFTUI_EXPORT
-const void *$s11OpenSwiftUI20DefaultStyleModifierMp;
+const void *OPENSWIFTUI_MANGLED(20DefaultStyleModifierMp);
 
 const void *_OpenSwiftUI_defaultStyleModifierProtocolDescriptor(void) {
-    return &$s11OpenSwiftUI20DefaultStyleModifierMp;
+    return &OPENSWIFTUI_MANGLED(20DefaultStyleModifierMp);
 }
 
 OPENSWIFTUI_EXPORT
-const void *$s11OpenSwiftUI21StyleOverrideModifierMp;
+const void *OPENSWIFTUI_MANGLED(21StyleOverrideModifierMp);
 
 const void *_OpenSwiftUI_styleOverrideModifierProtocolDescriptor(void) {
-    return &$s11OpenSwiftUI21StyleOverrideModifierMp;
+    return &OPENSWIFTUI_MANGLED(21StyleOverrideModifierMp);
 }
 
 OPENSWIFTUI_EXPORT
-const void *$s11OpenSwiftUI27StyleWriterOverrideModifierMp;
+const void *OPENSWIFTUI_MANGLED(27StyleWriterOverrideModifierMp);
 
 const void *_OpenSwiftUI_styleWriterOverrideModifierProtocolDescriptor(void) {
-    return &$s11OpenSwiftUI27StyleWriterOverrideModifierMp;
+    return &OPENSWIFTUI_MANGLED(27StyleWriterOverrideModifierMp);
 }
 
 OPENSWIFTUI_EXPORT
-const void *$s11OpenSwiftUI12StyleContextMp;
+const void *OPENSWIFTUI_MANGLED(12StyleContextMp);
 
 const void *_OpenSwiftUI_styleContextProtocolDescriptor(void) {
-    return &$s11OpenSwiftUI12StyleContextMp;
+    return &OPENSWIFTUI_MANGLED(12StyleContextMp);
 }
