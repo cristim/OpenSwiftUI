@@ -12,11 +12,6 @@ if len(sys.argv) != 3:
 SRC, DST = sys.argv[1], sys.argv[2]
 IMPORT = re.compile(r'^\s*(?:@_spi\([^)]*\)\s*)*(?:package|public|internal|fileprivate|private)?\s*import\s+OpenSwiftUICore\s*$')
 ATTR = re.compile(r'^\s*@(?:_spi\([^)]*\)|_exported)\s*$')
-# Apple's own Observation module is the ABI-correct source of Observable and
-# ObservationRegistrar; OpenObservation is only its open-source twin. ObservationTracking
-# and _AccessList live behind @_spi(SwiftUI) there, so the import needs that SPI group or
-# they resolve as "cannot find type" despite being present.
-OBS = re.compile(r'^\s*(?:@_spi\([^)]*\)\s*)*(package|public|internal|fileprivate|private)?\s*import\s+OpenObservation\s*$')
 # Once both targets are one module, a re-export alias of a Core type names itself.
 SELF_ALIAS = re.compile(r'^\s*(?:package|public)?\s*typealias\s+(\w+)\s*=\s*OpenSwiftUI(?:Core)?\.\1\s*$')
 # Both targets become one module named SwiftUI, so a reference qualified by either target's
@@ -27,7 +22,7 @@ QUAL = re.compile(r'(?<![\w.])OpenSwiftUI(?:Core)?\.(?=\w)')
 
 if os.path.exists(DST):
     shutil.rmtree(DST)
-stripped = swapped = requalified = files = renamed = dropped = 0
+stripped = requalified = files = renamed = dropped = 0
 # swiftc rejects two sources with the same file name in one module.
 seen = set()
 for target in ('OpenSwiftUICore', 'OpenSwiftUI'):
@@ -53,13 +48,8 @@ for target in ('OpenSwiftUICore', 'OpenSwiftUI'):
                 if SELF_ALIAS.match(line):
                     dropped += 1
                     continue
-                m = OBS.match(line)
-                if m:
-                    access = f'{m.group(1)} ' if m.group(1) else ''
-                    line = f'@_spi(SwiftUI) {access}import Observation'
-                    swapped += 1
                 line, n = QUAL.subn('SwiftUI.', line)
                 requalified += n
                 out.append(line)
             open(d, 'w').write('\n'.join(out) + '\n')
-print(f'staged {files} swift files, stripped {stripped} OpenSwiftUICore imports, swapped {swapped} OpenObservation imports, requalified {requalified} module-qualified references, renamed {renamed} duplicate file names, dropped {dropped} self-aliases -> {DST}')
+print(f'staged {files} swift files, stripped {stripped} OpenSwiftUICore imports, requalified {requalified} module-qualified references, renamed {renamed} duplicate file names, dropped {dropped} self-aliases -> {DST}')
