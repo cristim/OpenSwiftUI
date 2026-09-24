@@ -76,4 +76,38 @@ public struct Toggle<Label>: View where Label: View {
 @available(*, unavailable)
 extension Toggle: Sendable {}
 
-// TODO: Toggle + Extension
+// MARK: - Toggle + Text label
+
+@available(OpenSwiftUI_v1_0, *)
+extension Toggle where Label == Text {
+    /// Creates a toggle that generates its label from a localized string key.
+    ///
+    /// - Parameters:
+    ///   - titleKey: The key for the toggle's localized title, that describes
+    ///     the purpose of the toggle.
+    ///   - isOn: A binding to a property that indicates whether the toggle is
+    ///    on or off.
+    public init(_ titleKey: LocalizedStringKey, isOn: Binding<Bool>) {
+        self.init(isOn: isOn) {
+            Text(titleKey)
+        }
+    }
+
+    /// Creates a toggle that generates its label from a string.
+    ///
+    /// This initializer creates a ``Text`` view on your behalf, and treats the
+    /// title similar to ``Text/init(verbatim:)``.
+    ///
+    /// - Parameters:
+    ///   - title: A string that describes the purpose of the toggle.
+    ///   - isOn: A binding to a property that indicates whether the toggle is
+    ///    on or off.
+    @_disfavoredOverload
+    public init<S>(_ title: S, isOn: Binding<Bool>) where S: StringProtocol {
+        self.init(isOn: isOn) {
+            Text(title)
+        }
+    }
+}
+
+// TODO: Toggle title initializers with systemImage/image and sources
