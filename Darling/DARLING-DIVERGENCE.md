@@ -21,25 +21,36 @@ The single-module merge is done at build time by `Darling/stage-as-swiftui.py`, 
 it out of `Sources/` keeps the fork rebasable: a new upstream release is a `git rebase`, not a
 180-file conflict.
 
-The script does four things:
+The script does three things:
 
 1. **Strips `import OpenSwiftUICore`** (180 occurrences). Inside one module the cross-target import
    is meaningless. It also removes any `@_spi(...)` or `@_exported` attribute lines that decorated
    the import -- leaving those behind silently reattaches the attribute to the next declaration,
    which surfaces far away as `unexpected tokens in '#if' body`. Match every spelling: `import`,
    `package import`, `@_spi(X) public import`. Matching only the bare form misses 29 files.
-2. **Swaps `import OpenObservation` for `import Observation`** (10 occurrences). Apple's own
-   Observation module is the ABI-correct source of `Observable` and `ObservationRegistrar`;
-   OpenObservation is its open-source twin. darling-swift already ships `libswiftObservation.dylib`
-   with an arm64 slice. None of the symbols AppZapper binds mention Observation, so this is
-   ABI-neutral for that binary and removes a third package from the dependency graph. The import
-   keeps its access level (`public`, `package`): the package builds with `InternalImportsByDefault`.
-3. **Requalifies `OpenSwiftUI.X` and `OpenSwiftUICore.X`** as `SwiftUI.X`, and drops the
+2. **Requalifies `OpenSwiftUI.X` and `OpenSwiftUICore.X`** as `SwiftUI.X`, and drops the
    `typealias X = OpenSwiftUICore.X` re-export aliases, which would name themselves in one module.
-4. **Renames duplicate file names.** Five names exist in both targets (`ChangedBodyProperty`,
+3. **Renames duplicate file names.** Five names exist in both targets (`ChangedBodyProperty`,
    `PreferenceActionModifier`, `TestApp`, `TypesettingConfiguration`, `VectorImageLayer`), and swiftc
    rejects two sources with the same name in one module; the OpenSwiftUI copy becomes
    `<name>+OpenSwiftUI.swift`.
+
+### Observation stays on OpenObservation, for now
+
+The script used to swap `import OpenObservation` for Apple's `@_spi(SwiftUI) import Observation`. That
+cannot compile: `ObservationUtils.swift` sets `_ThreadLocal.value` to collect an access list, and in
+Apple's module (swift `stdlib/public/Observation`) `_ThreadLocal` is internal and its TLS accessors
+`_swift_observation_tls_get`/`_set` have hidden visibility. The `@_spi(SwiftUI)` surface exposes
+`ObservationTracking`, `_AccessList`, `_installTracking` and `withObservationTracking(_:willSet:didSet:)`,
+but no way to read the access list while a body runs.
+
+Darling's `libswiftObservation.dylib` itself works: a guest test with a manual `Observable` conformance
+and `withObservationTracking(_:onChange:)` fires exactly once, for the tracked property only.
+
+Consequence: the framework mangles Observation-typed API as `OpenObservation`, and apps' `@Observable`
+models register with Apple's `ObservationRegistrar` and its thread-local, which this build never reads.
+AppZapper binds no Observation symbols. Moving to Apple's module means rebuilding `_withObservation` on
+`withObservationTracking(_:willSet:didSet:)`.
 
 ## The overlay rule (read this before adding a framework)
 
@@ -433,6 +444,7 @@ not about line N.** Two plausible hypotheses about the named macro were both wro
     -module-name SwiftUI -enable-library-evolution
     -enable-experimental-feature AvailabilityMacro=<each macro in Package.swift>
     -I <OpenAttributeGraph modules>            # OpenAttributeGraph, OpenAttributeGraphShims
+    -I <OpenObservation modules>               # OpenObservation, linked statically into the framework
     -I <Combine module>                        # OpenCombine built as -module-name Combine
     -I <darling-swift overlays>/out-foundation-min/modules   # Foundation overlay, NOT FoundationEssentials
     -I <darling-swift overlays>/out/modules
