@@ -301,6 +301,8 @@ extension ViewModifier {
 ///
 @frozen
 public struct EmptyModifier: PrimitiveViewModifier, ViewModifier {
+    // Also the _SceneModifier witness; inference fails when both conformances are in one module.
+    public typealias Body = Never
     public static let identity = EmptyModifier()
 
     @inlinable
