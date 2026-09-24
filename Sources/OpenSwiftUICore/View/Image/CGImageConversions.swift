@@ -113,13 +113,13 @@ extension CGImage {
 
     package static func context(_ pixelWidth: Int, _ pixelHeight: Int, prefersMask: Bool) -> CGContext? {
         if prefersMask {
-            _CGBitmapContextCreate(
+            return _CGBitmapContextCreate(
                 pixelWidth, pixelHeight,
                 nil,
                 CGImageAlphaInfo.alphaOnly.rawValue
             )
         } else {
-            _CGBitmapContextCreate(
+            return _CGBitmapContextCreate(
                 pixelWidth, pixelHeight,
                 CGImage.sRGB,
                 CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue

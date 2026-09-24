@@ -44,9 +44,14 @@ package struct ProtobufDecoder {
     
     /// Creates an instance with a data buffer.
     package init(_ data: Data) {
-        let nsData = data as NSData
+        // NSData may expose a null bytes pointer for empty data. Keep a byte of
+        // backing storage so the zero-length range still has a valid base.
+        let nsData = (data.isEmpty ? Data([0]) : data) as NSData
         self.data = nsData
-        let ptr = nsData.bytes
+        let rawBytes: UnsafeRawPointer? = nsData.bytes
+        guard let ptr = rawBytes else {
+            preconditionFailure("NSData has no accessible bytes")
+        }
         self.ptr = ptr
         self.end = ptr + data.count
         self.packedEnd = ptr
