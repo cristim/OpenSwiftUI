@@ -30,8 +30,11 @@ public struct _GeometryActionModifier<Value>: UnaryViewModifier, PrimitiveViewMo
         self.action = action
     }
 
-    // @_silgen_name("$s7SwiftUI23_GeometryActionModifierV5valueyxAA0C5ProxyVYbcvi")
+    #if OPENSWIFTUI_SWIFTUI_ABI
+    @_silgen_name("$s7SwiftUI23_GeometryActionModifierV5valueyxAA0C5ProxyVYbcvi")
+    #else
     @_silgen_name("$s11OpenSwiftUI23_GeometryActionModifierV5valueyxAA0D5ProxyVYbcvi")
+    #endif
     @usableFromInline
     internal mutating func valueInitAccessorABIShim(value: @escaping @Sendable (GeometryProxy) -> Value) {
         self.value = value
@@ -85,13 +88,25 @@ public struct _GeometryActionModifier2<Value>: ViewModifier, UnaryViewModifier, 
             _value = initialValue
         }
 
+        #if OPENSWIFTUI_SWIFTUI_ABI
+        @_silgen_name("$s7SwiftUI24_GeometryActionModifier2V5valueyxAA0C5ProxyVcvg")
+        #else
         @_silgen_name("$s11OpenSwiftUI24_GeometryActionModifier2V5valueyxAA0D5ProxyVcvg")
+        #endif
         get { _value }
 
+        #if OPENSWIFTUI_SWIFTUI_ABI
+        @_silgen_name("$s7SwiftUI24_GeometryActionModifier2V5valueyxAA0C5ProxyVcvs")
+        #else
         @_silgen_name("$s11OpenSwiftUI24_GeometryActionModifier2V5valueyxAA0D5ProxyVcvs")
+        #endif
         set { _value = newValue }
 
+        #if OPENSWIFTUI_SWIFTUI_ABI
+        @_silgen_name("$s7SwiftUI24_GeometryActionModifier2V5valueyxAA0C5ProxyVcvM")
+        #else
         @_silgen_name("$s11OpenSwiftUI24_GeometryActionModifier2V5valueyxAA0D5ProxyVcvM")
+        #endif
         _modify {
             var value: @Sendable (GeometryProxy) -> Value = _value
             defer { _value = value }

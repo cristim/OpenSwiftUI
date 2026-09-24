@@ -80,6 +80,13 @@
 #define OPENSWIFTUI_EXPORT extern
 #endif
 
+// Swift symbol of the OpenSwiftUI ABI module; OPENSWIFTUI_SWIFTUI_ABI when it is built with ABI name SwiftUI.
+#if OPENSWIFTUI_SWIFTUI_ABI
+#define OPENSWIFTUI_MANGLED(_suffix) $s7SwiftUI##_suffix
+#else
+#define OPENSWIFTUI_MANGLED(_suffix) $s11OpenSwiftUI##_suffix
+#endif
+
 #if __has_attribute(swift_private)
 # define OPENSWIFTUI_REFINED_FOR_SWIFT __attribute__((swift_private))
 #else

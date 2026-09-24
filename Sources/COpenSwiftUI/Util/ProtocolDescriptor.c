@@ -8,17 +8,17 @@
 #include "ProtocolDescriptor.h"
 
 OPENSWIFTUI_EXPORT
-const void *$s11OpenSwiftUI5SceneMp;
+const void *OPENSWIFTUI_MANGLED(5SceneMp);
 
 OPENSWIFTUI_EXPORT
-const void *$s11OpenSwiftUI8CommandsMp;
+const void *OPENSWIFTUI_MANGLED(8CommandsMp);
 
 const void *_sceneProtocolDescriptor(void) {
-    return &$s11OpenSwiftUI5SceneMp;
+    return &OPENSWIFTUI_MANGLED(5SceneMp);
 }
 
 const void *_commandsProtocolDescriptor(void) {
-    return &$s11OpenSwiftUI8CommandsMp;
+    return &OPENSWIFTUI_MANGLED(8CommandsMp);
 }
 
 #if OPENSWIFTUI_OPENCOMBINE
