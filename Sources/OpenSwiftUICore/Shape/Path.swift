@@ -198,6 +198,17 @@ public struct Path: Equatable, LosslessStringConvertible, @unchecked Sendable {
             }
         }
 
+        fileprivate func contains(_ point: CGPoint, eoFill: Bool) -> Bool {
+            let path = rbPath
+            defer {
+                #if canImport(CoreGraphics) || !OPENSWIFTUI_CF_CGTYPES
+                // `rbPath` wraps a CGPath-backed box in a new, retained ORBPath.
+                if kind == .cgPath { path.release() }
+                #endif
+            }
+            return path.contains(point: point, eoFill: eoFill)
+        }
+
         @inline(__always)
         fileprivate func retainRBPath() -> ORBPath {
             let rbPath = rbPath
@@ -530,7 +541,24 @@ public struct Path: Equatable, LosslessStringConvertible, @unchecked Sendable {
     /// If `eoFill` is true, this method uses the even-odd rule to define which
     /// points are inside the path. Otherwise, it uses the non-zero rule.
     public func contains(_ p: CGPoint, eoFill: Bool = false) -> Bool {
-        _openSwiftUIUnimplementedFailure()
+        switch storage {
+        case .empty:
+            return false
+        case let .rect(rect):
+            return rect.contains(p)
+        case let .ellipse(rect):
+            let rect = rect.standardized
+            guard rect.width > 0, rect.height > 0 else { return false }
+            let dx = (p.x - rect.midX) / (rect.width / 2)
+            let dy = (p.y - rect.midY) / (rect.height / 2)
+            return dx * dx + dy * dy < 1
+        case let .roundedRect(fixedRoundedRect):
+            return fixedRoundedRect.contains(p)
+        case .stroked, .trimmed:
+            _openSwiftUIUnreachableCode()
+        case let .path(pathBox):
+            return pathBox.contains(p, eoFill: eoFill)
+        }
     }
 
     package func contains(
@@ -548,7 +576,9 @@ public struct Path: Equatable, LosslessStringConvertible, @unchecked Sendable {
         eoFill: Bool = false,
         origin: CGPoint = .zero
     ) -> BitVector64 {
-        _openSwiftUIUnimplementedFailure()
+        points.mapBool { point in
+            contains(CGPoint(x: point.x - origin.x, y: point.y - origin.y), eoFill: eoFill)
+        }
     }
 
     /// An element of a path.
