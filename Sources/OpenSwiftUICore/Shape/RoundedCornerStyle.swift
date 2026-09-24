@@ -94,8 +94,17 @@ package struct FixedRoundedRect: Equatable {
     }
     #endif
 
-    /// Treats both corner styles as circular arcs of `clampedCornerSize`.
     package func contains(_ point: CGPoint) -> Bool {
+        #if canImport(Darwin)
+        // OpenRenderBox does not implement path containment yet.
+        if renderBoxVendor == .rb {
+            return withTemporaryPath { $0.contains(point: point, eoFill: false) }
+        }
+        #endif
+        return containsApproximatingCornersAsCircularArcs(point)
+    }
+
+    private func containsApproximatingCornersAsCircularArcs(_ point: CGPoint) -> Bool {
         let rect = rect.standardized
         guard rect.contains(point) else { return false }
         let corner = clampedCornerSize
