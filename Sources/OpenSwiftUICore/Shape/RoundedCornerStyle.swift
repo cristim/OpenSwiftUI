@@ -92,13 +92,27 @@ package struct FixedRoundedRect: Equatable {
             )
         }
     }
+    #endif
 
     package func contains(_ point: CGPoint) -> Bool {
-        withTemporaryPath { path in
-            path.contains(point: point, eoFill: false)
+        #if canImport(Darwin)
+        // OpenRenderBox does not implement path containment yet.
+        if renderBoxVendor == .rb {
+            return withTemporaryPath { $0.contains(point: point, eoFill: false) }
         }
+        #endif
+        return containsApproximatingCornersAsCircularArcs(point)
     }
-    #endif
+
+    private func containsApproximatingCornersAsCircularArcs(_ point: CGPoint) -> Bool {
+        let rect = rect.standardized
+        guard rect.contains(point) else { return false }
+        let corner = clampedCornerSize
+        guard corner.width > 0, corner.height > 0 else { return true }
+        let dx = max(rect.minX + corner.width - point.x, point.x - (rect.maxX - corner.width), 0) / corner.width
+        let dy = max(rect.minY + corner.height - point.y, point.y - (rect.maxY - corner.height), 0) / corner.height
+        return dx * dx + dy * dy < 1
+    }
 
     package func applying(_ m: CGAffineTransform) -> FixedRoundedRect {
         let newRect = rect.applying(m)
