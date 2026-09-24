@@ -215,7 +215,75 @@ extension _OpacityEffect: ProtobufMessage {
 
 // MARK: - ShapeStyle + _OpacityShapeStyle
 
-// TODO: _OpacityShapeStyle
+@available(OpenSwiftUI_v3_0, *)
+extension ShapeStyle {
+    /// Returns a new style based on `self` that multiplies by the specified
+    /// opacity when drawing.
+    @inlinable
+    public func opacity(_ opacity: Double) -> some ShapeStyle {
+        _OpacityShapeStyle(style: self, opacity: Float(opacity))
+    }
+}
+
+@available(OpenSwiftUI_v4_0, *)
+extension ShapeStyle where Self == AnyShapeStyle {
+    /// Returns a new style based on the current style that multiplies by
+    /// `opacity` when drawing.
+    ///
+    /// In most contexts the current style is the foreground but e.g.
+    /// when setting the value of the background style, that becomes
+    /// the current implicit style.
+    @_alwaysEmitIntoClient
+    public static func opacity(_ opacity: Double) -> some ShapeStyle {
+        _OpacityShapeStyle(style: _ImplicitShapeStyle(), opacity: Float(opacity))
+    }
+}
+
+@available(OpenSwiftUI_v3_0, *)
+@frozen
+public struct _OpacityShapeStyle<Style>: ShapeStyle, PrimitiveShapeStyle where Style: ShapeStyle {
+    public var style: Style
+
+    public var opacity: Float
+
+    @inlinable
+    public init(style: Style, opacity: Float) {
+        self.style = style
+        self.opacity = opacity
+    }
+
+    public func _apply(to shape: inout _ShapeStyle_Shape) {
+        switch shape.operation {
+        case .prepareText:
+            style._apply(to: &shape)
+            if case let .preparedText(.foregroundColor(color)) = shape.result {
+                shape.result = .preparedText(.foregroundColor(color.opacity(Double(opacity))))
+            }
+        case let .resolveStyle(name, levels):
+            style._apply(to: &shape)
+            shape.stylePack.modify(name: name, levels: levels) { style in
+                style.applyOpacity(opacity)
+            }
+        case .fallbackColor:
+            style._apply(to: &shape)
+            if case let .color(color) = shape.result {
+                shape.result = .color(color.opacity(Double(opacity)))
+            }
+        case .modifyBackground, .multiLevel:
+            style._apply(to: &shape)
+        case .copyStyle:
+            style.mapCopiedStyle(in: &shape) { style in
+                _OpacityShapeStyle<AnyShapeStyle>(style: style, opacity: opacity)
+            }
+        case .primaryStyle:
+            break
+        }
+    }
+
+    public static func _apply(to type: inout _ShapeStyle_ShapeType) {
+        Style._apply(to: &type)
+    }
+}
 
 // TODO: _OpacitiesShapeStyle
 
