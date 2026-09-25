@@ -46,7 +46,11 @@ package struct ProtobufDecoder {
     package init(_ data: Data) {
         let nsData = data as NSData
         self.data = nsData
-        let ptr = nsData.bytes
+        // Darling's NSData overlay marks bytes optional for empty data.
+        // Decoding checks ptr == end before dereferencing an empty buffer.
+        let bytes = nsData.bytes
+        precondition(bytes != nil || data.isEmpty, "nonempty NSData without bytes")
+        let ptr = bytes ?? UnsafeRawPointer(bitPattern: 1)!
         self.ptr = ptr
         self.end = ptr + data.count
         self.packedEnd = ptr
