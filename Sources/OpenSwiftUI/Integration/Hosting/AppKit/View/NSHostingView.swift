@@ -7,9 +7,9 @@
 //  ID: 32B6F54841135BB466A5C1362EB89D05 (SwiftUI)
 
 #if os(macOS)
+public import Foundation
 @_spi(ForOpenSwiftUIOnly)
 @_spi(Private)
-public import Foundation
 public import OpenSwiftUICore
 public import AppKit
 import OpenSwiftUI_SPI
