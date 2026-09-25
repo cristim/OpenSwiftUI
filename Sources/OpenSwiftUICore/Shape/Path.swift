@@ -420,7 +420,9 @@ public struct Path: Equatable, LosslessStringConvertible, @unchecked Sendable {
     /// describe a valid path.
     public init?(_ string: String) {
         #if canImport(CoreGraphics)
-        let mutablePath = CGMutablePath()
+        guard let mutablePath = CGMutablePath() else {
+            return nil
+        }
         let nsString = string as NSString
         guard let str = nsString.utf8String else {
             return nil
