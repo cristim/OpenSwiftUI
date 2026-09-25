@@ -153,7 +153,7 @@ package struct ApplyTransitionModifier<TransitionType>: PrimitiveViewModifier, M
         inputs: _ViewInputs,
         body: @escaping (_Graph, _ViewInputs) -> _ViewOutputs
     ) -> _ViewOutputs {
-        .init()
+        body(_Graph(), inputs)
     }
 
     nonisolated package static func _viewListCount(
