@@ -54,7 +54,7 @@ final class NSViewPlatformViewDefinition: PlatformViewDefinition, @unchecked Sen
         default:
             cls = kind.isContainer ? _NSInheritedView.self : _NSGraphicsView.self
         }
-        let view = cls.init()
+        let view = cls.init(frame: .zero)
         let layer = type.init()
         _SetLayerViewDelegate(layer, view)
         view.layer = layer
