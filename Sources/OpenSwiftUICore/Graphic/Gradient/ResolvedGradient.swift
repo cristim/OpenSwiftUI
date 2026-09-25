@@ -2,8 +2,11 @@
 //  ResolvedGradient.swift
 //  OpenSwiftUICore
 //
+
 //  Audited for 6.0.87
 //  Status: Empty
+
+public import CoreGraphics
 
 package struct ResolvedGradient: Equatable {
     package enum ColorSpace {

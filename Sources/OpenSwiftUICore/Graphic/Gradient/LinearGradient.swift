@@ -1,4 +1,4 @@
-import CoreGraphics
+public import CoreGraphics
 
 public struct LinearGradient: PrimitiveShapeStyle, View {
     public var gradient: Gradient
