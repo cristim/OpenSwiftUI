@@ -17,14 +17,31 @@ package struct ResolvedGradient: Equatable {
     }
 }
 
-// FIXME
 public struct Gradient {
-    package init(_ resolved: ResolvedGradient) {
-//        self.init(
-//            stops: resolved.stops.map {
-//                Stop(color: Color($0.color), location: $0.location)
-//            }
-//        )
+    public struct Stop {
+        public var color: Color
+        public var location: CGFloat
+
+        public init(color: Color, location: CGFloat) {
+            self.color = color
+            self.location = location
+        }
     }
 
+    public var stops: [Stop]
+
+    public init(stops: [Stop]) {
+        self.stops = stops
+    }
+
+    public init(colors: [Color]) {
+        let denominator = CGFloat(max(colors.count - 1, 1))
+        self.stops = colors.enumerated().map { index, color in
+            Stop(color: color, location: CGFloat(index) / denominator)
+        }
+    }
+
+    package init(_ resolved: ResolvedGradient) {
+        self.stops = []
+    }
 }
