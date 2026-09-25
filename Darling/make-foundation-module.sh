@@ -10,10 +10,12 @@
 # cannot appear in a package or public signature. Verified with `clang -cc1 -module-file-info`
 # on the AppKit pcm: it listed CoreGraphics, CoreText, QuartzCore ... and no Foundation.
 #
-# The headers come from swift-darling's curated SDK because that is the copy that carries
-# Foundation.apinotes; the two header sets are otherwise the same files.
+# Prefer current darling-foundation headers when FOUNDATION_ROOT is set, so new API
+# declarations are visible without waiting for the curated SDK snapshot to catch up.
+# Keep the curated SDK as a fallback and for its Foundation.apinotes file.
 #
 #   CURATED_SDK  swift-darling's MacOSX.sdk
+#   FOUNDATION_ROOT  optional darling-foundation checkout
 #   OUT          the overlay's .../System/Library/Frameworks
 set -eu
 : "${CURATED_SDK:?swift-darling's MacOSX.sdk (the copy with Foundation.apinotes)}" \
@@ -21,10 +23,20 @@ set -eu
 
 src=$CURATED_SDK/System/Library/Frameworks/Foundation.framework/Headers
 [ -f "$src/Foundation.apinotes" ] || { echo "no Foundation.apinotes in $src" >&2; exit 1; }
+if [ -n "${FOUNDATION_ROOT:-}" ]; then
+  [ -f "$FOUNDATION_ROOT/include/Foundation/Foundation.h" ] || {
+    echo "no Foundation headers in $FOUNDATION_ROOT" >&2; exit 1;
+  }
+  src=$FOUNDATION_ROOT/include/Foundation
+fi
 
 rm -rf "$OUT/Foundation.framework"
 mkdir -p "$OUT/Foundation.framework/Headers" "$OUT/Foundation.framework/Modules"
 cp -a "$src/." "$OUT/Foundation.framework/Headers/"
+if [ ! -f "$OUT/Foundation.framework/Headers/Foundation.apinotes" ]; then
+  cp "$CURATED_SDK/System/Library/Frameworks/Foundation.framework/Headers/Foundation.apinotes" \
+    "$OUT/Foundation.framework/Headers/Foundation.apinotes"
+fi
 
 # A directory umbrella, not `umbrella header "Foundation.h"`: 50 of the 202 headers are not
 # reachable from Foundation.h, NSLayoutConstraint.h and NSNumber.h among them. With a header

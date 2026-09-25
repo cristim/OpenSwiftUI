@@ -188,13 +188,13 @@ let supportMultiProducts: Bool = envBoolValue("SUPPORT_MULTI_PRODUCTS", default:
 /// Linux: true + No CGPathRef support in ORBPath -> confilict with Foundation def
 /// Linux: false -> use Swift implementation with OpenCoreGraphics Swift CGPath
 let cfCGTypes = envBoolValue("CF_CGTYPES", default: buildForDarwinPlatform)
+// Cross-compiling for Darwin can use a Clang without Apple's typed-allocation flags.
+let typedMemoryOperations = envBoolValue("TYPED_MEMORY_OPERATIONS", default: true)
 
 // MARK: - Shared Settings
 
 var sharedCSettings: [CSetting] = [
     .define("NDEBUG", .when(configuration: .release)),
-    // Rewrite malloc() to malloc_type_malloc() for type-isolated allocation buckets (xzone malloc).
-    .unsafeFlags(["-ftyped-memory-operations"], .when(platforms: .darwinPlatforms)),
     .unsafeFlags(["-fmodules"]),
     .define("_WASI_EMULATED_SIGNAL", .when(platforms: [.wasi])),
     .unsafeFlags(["-isystem", swiftCorelibsPath], .when(platforms: .nonDarwinPlatforms)),
@@ -202,14 +202,16 @@ var sharedCSettings: [CSetting] = [
 
 var sharedCxxSettings: [CXXSetting] = [
     .define("NDEBUG", .when(configuration: .release)),
-    // Rewrite malloc() to malloc_type_malloc() for type-isolated allocation buckets (xzone malloc).
-    .unsafeFlags(["-ftyped-memory-operations"], .when(platforms: .darwinPlatforms)),
-    // Rewrite operator new/delete to typed variants (operator new(size_t, std::__type_descriptor_t)).
-    .unsafeFlags(["-ftyped-cxx-new-delete"], .when(platforms: .darwinPlatforms)),
     .unsafeFlags(["-fcxx-modules"]),
     .define("_WASI_EMULATED_SIGNAL", .when(platforms: [.wasi])),
     .unsafeFlags(["-isystem", swiftCorelibsPath], .when(platforms: .nonDarwinPlatforms)),
 ]
+
+if typedMemoryOperations {
+    // Keep Apple's typed allocation behavior by default for native builds.
+    sharedCSettings.append(.unsafeFlags(["-ftyped-memory-operations"], .when(platforms: .darwinPlatforms)))
+    sharedCxxSettings.append(.unsafeFlags(["-ftyped-memory-operations", "-ftyped-cxx-new-delete"], .when(platforms: .darwinPlatforms)))
+}
 
 var sharedSwiftSettings: [SwiftSetting] = [
     .enableUpcomingFeature("BareSlashRegexLiterals"),
@@ -957,9 +959,9 @@ if useLocalDeps {
 }
 
 if openCombineCondition {
-    package.dependencies.append(
-        .package(url: "https://github.com/OpenSwiftUIProject/OpenCombine.git", from: "0.16.0")
-    )
+    package.dependencies.append(useLocalDeps
+        ? .package(path: "../OpenCombine")
+        : .package(url: "https://github.com/OpenSwiftUIProject/OpenCombine.git", from: "0.16.0"))
     cOpenSwiftUITarget.addOpenCombineCSettings()
     openSwiftUICoreTarget.addOpenCombineSettings()
     openSwiftUITarget.addOpenCombineSettings()
