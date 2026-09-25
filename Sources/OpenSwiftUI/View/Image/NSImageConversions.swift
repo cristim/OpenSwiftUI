@@ -58,7 +58,7 @@ extension NSImage: ImageProvider {
 
     package var resolvedAccessibilityDescription: String? {
         guard let description = accessibilityDescription, !description.isEmpty else {
-            return _defaultAccessibilityDescription
+            return nil
         }
         return description
     }
