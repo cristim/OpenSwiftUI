@@ -5,6 +5,7 @@ import OpenSwiftUICore
 
 public struct TextField<Label>: View where Label: View {
     @Binding private var text: String
+    @Environment(\.submitAction) private var submitAction
     private var label: Label
     private var onEditingChanged: (Bool) -> Void
     private var onCommit: () -> Void
@@ -23,7 +24,12 @@ public struct TextField<Label>: View where Label: View {
 
     public var body: some View {
         #if os(macOS)
-        AppKitTextField(text: $text, onEditingChanged: onEditingChanged, onCommit: onCommit)
+        AppKitTextField(
+            text: $text,
+            onEditingChanged: onEditingChanged,
+            onCommit: onCommit,
+            onSubmit: submitAction?.triggers.contains(.text) == true ? submitAction?.action : nil
+        )
         #else
         label
         #endif
@@ -51,6 +57,7 @@ private struct AppKitTextField: NSViewRepresentable {
     @Binding var text: String
     var onEditingChanged: (Bool) -> Void
     var onCommit: () -> Void
+    var onSubmit: (() -> Void)?
 
     func makeNSView(context: Context) -> NSTextField {
         let view = NSTextField()
@@ -62,28 +69,32 @@ private struct AppKitTextField: NSViewRepresentable {
         context.coordinator.text = $text
         context.coordinator.onEditingChanged = onEditingChanged
         context.coordinator.onCommit = onCommit
+        context.coordinator.onSubmit = onSubmit
         if view.stringValue() != text {
             view.setStringValue(text)
         }
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, onEditingChanged: onEditingChanged, onCommit: onCommit)
+        Coordinator(text: $text, onEditingChanged: onEditingChanged, onCommit: onCommit, onSubmit: onSubmit)
     }
 
     final class Coordinator: PlatformViewCoordinator {
         var text: Binding<String>
         var onEditingChanged: (Bool) -> Void
         var onCommit: () -> Void
+        var onSubmit: (() -> Void)?
 
         init(
             text: Binding<String>,
             onEditingChanged: @escaping (Bool) -> Void,
-            onCommit: @escaping () -> Void
+            onCommit: @escaping () -> Void,
+            onSubmit: (() -> Void)?
         ) {
             self.text = text
             self.onEditingChanged = onEditingChanged
             self.onCommit = onCommit
+            self.onSubmit = onSubmit
         }
 
         @objc override func controlTextDidBeginEditing(_ notification: Notification) {
@@ -97,7 +108,11 @@ private struct AppKitTextField: NSViewRepresentable {
 
         @objc override func controlTextDidEndEditing(_ notification: Notification) {
             onEditingChanged(false)
-            onCommit()
+            // AppKit uses 0x10 for Return; losing focus or pressing Tab is not a submit.
+            if (notification.userInfo?["NSTextMovement"] as? Int) == 0x10 {
+                onCommit()
+                onSubmit?()
+            }
         }
     }
 }
