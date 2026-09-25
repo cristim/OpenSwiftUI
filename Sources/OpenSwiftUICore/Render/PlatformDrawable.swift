@@ -13,6 +13,9 @@ public import OpenQuartzCoreShims
 #if canImport(QuartzCore)
 import QuartzCore_Private
 #endif
+#if os(macOS)
+import AppKit
+#endif
 import OpenSwiftUI_SPI
 
 // MARK: - PlatformDrawable
@@ -106,6 +109,14 @@ public struct PlatformDrawableContent: @unchecked Sendable {
             #if canImport(Darwin)
             let cgContext = CoreGraphicsContext(cgContext: ctx)
             cgContext.push()
+            #if os(macOS)
+            // The bitmap context can have either vertical direction. Keep
+            // AppKit's flipped flag in sync with the actual CGContext so
+            // text layout and its glyph baseline use the same coordinates.
+            NSGraphicsContext.setCurrent(
+                NSGraphicsContext(cgContext: ctx, flipped: ctx.ctm.d < 0)
+            )
+            #endif
             callback(size)
             cgContext.pop()
             #else
