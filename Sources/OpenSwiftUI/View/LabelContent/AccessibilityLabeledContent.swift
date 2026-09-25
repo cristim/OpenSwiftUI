@@ -135,12 +135,12 @@ struct AccessibilityChildBehavior {
 }
 
 // FIXME
-struct AccessibilityAttachmentModifier: PrimitiveViewModifier {
+public struct AccessibilityAttachmentModifier: PrimitiveViewModifier {
     var storage: MutableBox<AccessibilityAttachment>
 
     let behavior: AccessibilityChildBehavior?
 
-    nonisolated static func _makeView(
+    nonisolated public static func _makeView(
         modifier _: _GraphValue<Self>,
         inputs: _ViewInputs,
         body: @escaping (_Graph, _ViewInputs) -> _ViewOutputs
@@ -148,7 +148,7 @@ struct AccessibilityAttachmentModifier: PrimitiveViewModifier {
         body(_Graph(), inputs)
     }
 
-    nonisolated static func _makeViewList(
+    nonisolated public static func _makeViewList(
         modifier _: _GraphValue<Self>,
         inputs: _ViewListInputs,
         body: @escaping (_Graph, _ViewListInputs) -> _ViewListOutputs
@@ -158,7 +158,23 @@ struct AccessibilityAttachmentModifier: PrimitiveViewModifier {
 }
 
 // FIXME
-struct AccessibilityAttachment {}
+struct AccessibilityAttachment {
+    var isHidden = false
+}
+
+extension View {
+    nonisolated public func accessibilityHidden(
+        _ hidden: Bool
+    ) -> ModifiedContent<Self, AccessibilityAttachmentModifier> {
+        ModifiedContent(
+            content: self,
+            modifier: AccessibilityAttachmentModifier(
+                storage: MutableBox(AccessibilityAttachment(isHidden: hidden)),
+                behavior: nil
+            )
+        )
+    }
+}
 
 extension AccessibilityAttachment {
     enum Tree {
