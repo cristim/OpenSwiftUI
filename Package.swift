@@ -615,9 +615,11 @@ let openSwiftUICoreTarget = Target.target(
     swiftSettings: sharedSwiftSettings + [
         .unsafeFlags(["-module-abi-name", "OpenSwiftUI"]),
     ],
-    linkerSettings: computeCondition ? [
+    linkerSettings: (computeCondition ? [
         .linkedLibrary("c++", .when(platforms: .darwinPlatforms)),
-    ] : []
+    ] : []) + [
+        .linkedFramework("Symbols", .when(platforms: .darwinPlatforms)),
+    ]
 )
 
 let openSwiftUICoreTestTarget = Target.testTarget(
