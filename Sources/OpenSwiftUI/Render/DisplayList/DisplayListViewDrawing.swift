@@ -92,6 +92,7 @@ final class CGDrawingView: PlatformGraphicsView, PlatformDrawable {
         #if os(iOS) || os(visionOS)
         layer.setNeedsDisplay()
         #elseif os(macOS)
+        layer?.setNeedsDisplay()
         needsDisplay = true
         #endif
         return true
@@ -237,4 +238,3 @@ final class ORBDrawingView: OpenRenderBoxView, PlatformDrawable {
 }
 
 #endif
-
