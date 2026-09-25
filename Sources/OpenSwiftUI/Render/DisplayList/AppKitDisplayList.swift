@@ -34,8 +34,9 @@ final class NSViewPlatformViewDefinition: PlatformViewDefinition, @unchecked Sen
         case .mask:
             view = _NSInheritedView()
             let maskView = _NSInheritedView()
-            view.mask = maskView
             initView(maskView, kind: .inherited)
+            view.wantsLayer = true
+            view.layer?.mask = maskView.layer
         default:
             view = kind.isContainer ? _NSInheritedView() : _NSGraphicsView()
         }
