@@ -92,7 +92,7 @@ final class CGDrawingView: PlatformGraphicsView, PlatformDrawable {
         #if os(iOS) || os(visionOS)
         layer.setNeedsDisplay()
         #elseif os(macOS)
-        layer?.setNeedsDisplay()
+        layer.setNeedsDisplay()
         needsDisplay = true
         #endif
         return true
