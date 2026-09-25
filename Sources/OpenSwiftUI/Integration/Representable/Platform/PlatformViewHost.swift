@@ -286,7 +286,9 @@ where Content: PlatformViewRepresentable {
         guard let viewController = representedViewProvider as? PlatformViewController else {
             return
         }
-        let view = viewController.view
+        guard let view = viewController.view else {
+            return
+        }
         guard view.superview != newSuperview else {
             return
         }
