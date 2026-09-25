@@ -38,7 +38,7 @@ public struct Path: Equatable, LosslessStringConvertible, @unchecked Sendable {
         @inline(__always)
         init(_ path: CGPath) {
             kind = .cgPath
-            data = PathData(cgPath: .passUnretained(path))
+            data = PathData(cgPath: .passRetained(path))
         }
         #endif
 
