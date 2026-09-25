@@ -6,6 +6,7 @@
 //  Status: WIP
 
 public import OpenCoreGraphicsShims
+public import Symbols
 package import OpenRenderBoxShims
 
 // MARK: - ContentTransition [WIP]
@@ -349,6 +350,15 @@ public struct ContentTransition: Equatable, Sendable {
     /// interpolate the symbol's paths. When interpolation is unavailable, the
     /// system uses an opacity transition instead.
     public static let interpolate: ContentTransition = .init(storage: .named(.init())) // FIXME
+
+    /// Creates a content transition for changes to symbol images.
+    @available(OpenSwiftUI_v5_0, *)
+    public static func symbolEffect<T: SymbolEffect & ContentTransitionSymbolEffect>(
+        _ effect: T,
+        options: SymbolEffectOptions = .default
+    ) -> ContentTransition {
+        .init(storage: .symbolReplace(.init()))
+    }
 
     /// Creates a content transition intended to be used with `Text`
     /// views displaying numeric text. In certain environments changes
