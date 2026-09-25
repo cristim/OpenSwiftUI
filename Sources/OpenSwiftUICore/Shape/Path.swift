@@ -735,19 +735,32 @@ extension TrimmedPath: Sendable {}
 
 @available(OpenSwiftUI_v1_0, *)
 extension Path {
+    private mutating func editCGPath(_ edit: (CGMutablePath) -> Void) {
+        #if canImport(CoreGraphics)
+        let path = CGMutablePath()!
+        if !isEmpty {
+            CGPathAddPath(path, nil, cgPath)
+        }
+        edit(path)
+        self = Path(path)
+        #else
+        _openSwiftUIPlatformUnimplementedFailure()
+        #endif
+    }
+
     public mutating func move(to end: CGPoint) {
-        _openSwiftUIUnimplementedFailure()
+        editCGPath { CGPathMoveToPoint($0, nil, end.x, end.y) }
     }
 
     public mutating func addLine(to end: CGPoint) {
-        _openSwiftUIUnimplementedFailure()
+        editCGPath { CGPathAddLineToPoint($0, nil, end.x, end.y) }
     }
 
     public mutating func addQuadCurve(
         to end: CGPoint,
         control: CGPoint
     ) {
-        _openSwiftUIUnimplementedFailure()
+        editCGPath { CGPathAddQuadCurveToPoint($0, nil, control.x, control.y, end.x, end.y) }
     }
 
     public mutating func addCurve(
@@ -755,18 +768,21 @@ extension Path {
         control1: CGPoint,
         control2: CGPoint
     ) {
-        _openSwiftUIUnimplementedFailure()
+        editCGPath { CGPathAddCurveToPoint($0, nil, control1.x, control1.y, control2.x, control2.y, end.x, end.y) }
     }
 
     public mutating func closeSubpath() {
-        _openSwiftUIUnimplementedFailure()
+        editCGPath { CGPathCloseSubpath($0) }
     }
 
     public mutating func addRect(
         _ rect: CGRect,
         transform: CGAffineTransform = .identity
     ) {
-        _openSwiftUIUnimplementedFailure()
+        editCGPath { path in
+            var transform = transform
+            CGPathAddRect(path, &transform, rect)
+        }
     }
 
     public mutating func addRoundedRect(
