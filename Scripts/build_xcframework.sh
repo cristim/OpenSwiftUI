@@ -265,8 +265,7 @@ puts "Removed #{macro_name} archive references from #{File.dirname(path)}"
 RUBY
 }
 
-# The xcframework archive path sets OPENSWIFTUI_XCFRAMEWORK_BUILD, which expands
-# macro usages inline where needed. Avoid forcing generated macro tool targets to
+# The library targets use no macros. Avoid forcing generated macro tool targets to
 # archive for simulator SDKs, where Xcode can try to build them for the target
 # platform instead of the host platform.
 remove_generated_macro_references "$PROJECT_ROOT/.build/tuist-derived/Projects/OpenObservation/OpenObservation.xcodeproj" "OpenObservation" "OpenObservationMacros"

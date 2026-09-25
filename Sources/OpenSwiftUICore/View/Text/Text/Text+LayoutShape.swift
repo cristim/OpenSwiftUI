@@ -105,22 +105,15 @@ package struct TextShape: Equatable {
     }
 }
 
-// Workaround: xcodebuild builds SPM macro targets for the target SDK platform
-// instead of the host platform, causing "malformed response" errors on non-macOS
-// SDKs (eg. iphonesimulator). Expand @Entry macro inline for xcframework builds.
-// See https://forums.swift.org/t/xcodebuild-attempts-to-build-macro-package-with-wrong-arch/76340
-#if OPENSWIFTUI_XCFRAMEWORK_BUILD
+// Not @Entry: xcframework builds compile macro plugins for the wrong platform, and the expansion's
+// `OpenSwiftUICore.EnvironmentKey` doesn't resolve when Core is built as part of module SwiftUI.
+private struct TextShapeKey: EnvironmentKey {
+    static var defaultValue: TextShape { .bounds }
+}
+
 extension EnvironmentValues {
     var textShape: TextShape {
-        get { self[__Key_textShape.self] }
-        set { self[__Key_textShape.self] = newValue }
-    }
-    private struct __Key_textShape: EnvironmentKey {
-        static var defaultValue: TextShape { .bounds }
+        get { self[TextShapeKey.self] }
+        set { self[TextShapeKey.self] = newValue }
     }
 }
-#else
-extension EnvironmentValues {
-    @Entry var textShape: TextShape = .bounds
-}
-#endif
