@@ -165,8 +165,16 @@ extension Color.Resolved : Animatable {
     public var animatableData: AnimatablePair<Float, AnimatablePair<Float, AnimatablePair<Float, Float>>> {
         get {
             if Self.legacyInterpolation {
-                // ResolvedGradient.Color.Space.convertIn(self)
-                _openSwiftUIUnimplementedFailure()
+                return AnimatablePair(
+                    red.scaled(by: .unitScale),
+                    AnimatablePair(
+                        green.scaled(by: .unitScale),
+                        AnimatablePair(
+                            blue.scaled(by: .unitScale),
+                            opacity.scaled(by: .unitScale)
+                        )
+                    )
+                )
             } else {
                 return AnimatablePair(
                     linearRed.scaled(by: .unitScale),
@@ -183,8 +191,10 @@ extension Color.Resolved : Animatable {
 
         set {
             if Self.legacyInterpolation {
-                // ResolvedGradient.Color.Space.convertOut(self)
-                _openSwiftUIUnimplementedFailure()
+                red = newValue.first.scaled(by: .inverseUnitScale)
+                green = newValue.second.first.scaled(by: .inverseUnitScale)
+                blue = newValue.second.second.first.scaled(by: .inverseUnitScale)
+                opacity = newValue.second.second.second.scaled(by: .inverseUnitScale)
             } else {
                 linearRed = newValue.first.scaled(by: .inverseUnitScale)
                 linearGreen = newValue.second.first.scaled(by: .inverseUnitScale)
