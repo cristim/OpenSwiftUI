@@ -7,6 +7,9 @@
 #   DARLING_SDK      swift-darling's MacOSX.sdk (the one with module maps)
 #   DARLING_HEADERS  darling/Developer/.../MacOSX.sdk/System/Library/Frameworks
 #   EXTRA_FRAMEWORKS optional: a directory of frameworks to search first
+#   EXTRA_CFLAGS     optional: the build's own gates, e.g. the -D flags the package
+#                    compiles its shims with. Without them this census cannot reach
+#                    UIFoundation_Private or OpenSwiftUI_SPI at all.
 #
 #   Darling/probe-clang-modules.sh AppKit CoreText QuartzCore ...
 set -u
@@ -15,14 +18,25 @@ here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/.." && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
+
+# Probe the headers the build actually compiles, which are the staged copy with
+# Darling/patches/ applied, not the pristine ones in Sources/.
+"$here/stage-spi.sh" "$tmp/stage" >/dev/null || {
+	echo "stage-spi.sh failed; not probing pristine headers instead" >&2
+	exit 1
+}
+spi=$tmp/stage/Sources/OpenSwiftUI_SPI
+# EXTRA_CFLAGS is expanded unquoted below, because it has to split into separate
+# flags. A path inside it must therefore not contain spaces.
 for m in "$@"; do
 	printf '%s\t' "$m"
 	echo "@import $m;" > "$tmp/probe.m"
 	if "$SWIFT_TOOLCHAIN/bin/clang" -target arm64-apple-macosx26.0 -isysroot "$DARLING_SDK" \
 		${EXTRA_FRAMEWORKS:+-F "$EXTRA_FRAMEWORKS"} -F "$DARLING_HEADERS" \
+		${EXTRA_CFLAGS:-} \
 		-Wno-undef-prefix -fmodules -fobjc-arc -fmodules-cache-path="$tmp/cache" \
-		-fmodule-map-file="$repo/Sources/OpenSwiftUI_SPI/module.modulemap" \
-		-I "$repo/Sources/OpenSwiftUI_SPI" \
+		-fmodule-map-file="$spi/module.modulemap" \
+		-I "$spi" \
 		-fmodule-map-file="$here/copenswiftui.modulemap" \
 		-I "$repo/Sources/COpenSwiftUI" \
 		-fsyntax-only "$tmp/probe.m" >"$tmp/probe.log" 2>&1
