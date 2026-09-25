@@ -7,6 +7,7 @@
 
 #import "CALayer+OpenSwiftUIAdditions.h"
 #import "CANullAction.h"
+#import <objc/runtime.h>
 
 #if __has_include(<QuartzCore/QuartzCore.h>)
 
@@ -31,25 +32,32 @@
 
 @implementation CALayer (OpenSwiftUIAdditions)
 
+static char viewTestPropertiesKey;
+static char displayListIDKey;
+
 - (uint64_t)openSwiftUI_viewTestProperties {
-    NSNumber *properties = [self valueForKey:@"_openSwiftUI_viewTestProperties"];
-    return properties.integerValue;
+    NSNumber *properties = objc_getAssociatedObject(self, &viewTestPropertiesKey);
+    return properties.unsignedLongLongValue;
 }
 
 - (void)setOpenSwiftUI_viewTestProperties:(uint64_t)properties {
-    [self setValue:[NSNumber numberWithUnsignedLongLong:properties] forKey:@"_openSwiftUI_viewTestProperties"];
+    objc_setAssociatedObject(self, &viewTestPropertiesKey,
+                             [NSNumber numberWithUnsignedLongLong:properties],
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
 - (int64_t)openSwiftUI_displayListID {
-    NSNumber *value = [self valueForKey:@"_openSwiftUI_displayListID"];
+    NSNumber *value = objc_getAssociatedObject(self, &displayListIDKey);
     if (value == nil) {
         return INT64_MAX;
     }
-    return value.integerValue;
+    return value.longLongValue;
 }
 
 - (void)setOpenSwiftUI_displayListID:(int64_t)displayListID {
-    [self setValue:[NSNumber numberWithInteger:displayListID] forKey:@"_openSwiftUI_displayListID"];
+    objc_setAssociatedObject(self, &displayListIDKey,
+                             [NSNumber numberWithLongLong:displayListID],
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
 - (void)openSwiftUI_setNoAnimationDelegate {
