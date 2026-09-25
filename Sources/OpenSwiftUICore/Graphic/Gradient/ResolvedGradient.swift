@@ -20,7 +20,9 @@ package struct ResolvedGradient: Equatable {
     }
 }
 
+@frozen
 public struct Gradient {
+    @frozen
     public struct Stop {
         public var color: Color
         public var location: CGFloat
