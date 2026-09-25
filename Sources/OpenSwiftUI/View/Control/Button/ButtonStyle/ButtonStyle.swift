@@ -13,3 +13,13 @@ public protocol ButtonStyle {
     
     typealias Configuration = ButtonStyleConfiguration
 }
+
+extension View {
+    nonisolated public func buttonStyle<S>(_ style: S) -> some View where S: ButtonStyle {
+        self
+    }
+
+    nonisolated public func buttonStyle<S>(_ style: S) -> some View where S: PrimitiveButtonStyle {
+        self
+    }
+}
