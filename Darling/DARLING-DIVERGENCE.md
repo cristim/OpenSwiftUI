@@ -21,18 +21,25 @@ The single-module merge is done at build time by `Darling/stage-as-swiftui.py`, 
 it out of `Sources/` keeps the fork rebasable: a new upstream release is a `git rebase`, not a
 180-file conflict.
 
-The script does two things:
+The script does four things:
 
 1. **Strips `import OpenSwiftUICore`** (180 occurrences). Inside one module the cross-target import
-   is meaningless. It also removes any `@_spi(...)` attribute lines that decorated the import --
-   leaving those behind silently reattaches the attribute to the next declaration, which surfaces far
-   away as `unexpected tokens in '#if' body`. Match every spelling: `import`, `package import`,
-   `@_spi(X) public import`. Matching only the bare form misses 29 files.
+   is meaningless. It also removes any `@_spi(...)` or `@_exported` attribute lines that decorated
+   the import -- leaving those behind silently reattaches the attribute to the next declaration,
+   which surfaces far away as `unexpected tokens in '#if' body`. Match every spelling: `import`,
+   `package import`, `@_spi(X) public import`. Matching only the bare form misses 29 files.
 2. **Swaps `import OpenObservation` for `import Observation`** (10 occurrences). Apple's own
    Observation module is the ABI-correct source of `Observable` and `ObservationRegistrar`;
    OpenObservation is its open-source twin. darling-swift already ships `libswiftObservation.dylib`
    with an arm64 slice. None of the symbols AppZapper binds mention Observation, so this is
-   ABI-neutral for that binary and removes a third package from the dependency graph.
+   ABI-neutral for that binary and removes a third package from the dependency graph. The import
+   keeps its access level (`public`, `package`): the package builds with `InternalImportsByDefault`.
+3. **Requalifies `OpenSwiftUI.X` and `OpenSwiftUICore.X`** as `SwiftUI.X`, and drops the
+   `typealias X = OpenSwiftUICore.X` re-export aliases, which would name themselves in one module.
+4. **Renames duplicate file names.** Five names exist in both targets (`ChangedBodyProperty`,
+   `PreferenceActionModifier`, `TestApp`, `TypesettingConfiguration`, `VectorImageLayer`), and swiftc
+   rejects two sources with the same name in one module; the OpenSwiftUI copy becomes
+   `<name>+OpenSwiftUI.swift`.
 
 ## The overlay rule (read this before adding a framework)
 
