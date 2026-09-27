@@ -32,9 +32,40 @@ for pair in "${dylib_files[@]}"; do
     args+=(-dylib_file "$pair")
 done
 
+# The recorded flag set covers system libraries only. The app-facing frameworks, the
+# Objective-C runtime and the Swift runtime come from a built Darling prefix, so the
+# undefined set collapses to the sibling reimplementations that still need linking.
+PREFIX=${PREFIX:?set PREFIX to a built Darling prefix}
+add() {
+    local install=$1 rel=$2 cand
+    for cand in "$PREFIX$rel" "${rel//\/Versions\/C\//\/Versions\/A\/}"; do
+        if [ -f "$cand" ]; then args+=(-dylib_file "$install:$cand"); return; fi
+    done
+    echo "!! missing in prefix: $install" >&2
+}
+add /usr/lib/libobjc.A.dylib            /usr/lib/libobjc.A.dylib
+add /usr/lib/libdispatch.dylib         /usr/lib/libdispatch.dylib
+add /usr/lib/swift/libswiftCore.dylib  /usr/lib/swift/libswiftCore.dylib
+add /usr/lib/swift/libswiftObjectiveC.dylib /usr/lib/swift/libswiftObjectiveC.dylib
+add /usr/lib/swift/libswiftDispatch.dylib   /usr/lib/swift/libswiftDispatch.dylib
+add /usr/lib/swift/libswiftDarwin.dylib     /usr/lib/swift/libswiftDarwin.dylib
+add /usr/lib/swift/libswiftCoreFoundation.dylib /usr/lib/swift/libswiftCoreFoundation.dylib
+add /usr/lib/swift/libswiftCoreGraphics.dylib   /usr/lib/swift/libswiftCoreGraphics.dylib
+add /System/Library/Frameworks/Foundation.framework/Versions/C/Foundation \
+    /System/Library/Frameworks/Foundation.framework/Versions/C/Foundation
+add /System/Library/Frameworks/AppKit.framework/Versions/C/AppKit \
+    /System/Library/Frameworks/AppKit.framework/Versions/C/AppKit
+add /System/Library/Frameworks/CoreGraphics.framework/Versions/A/CoreGraphics \
+    /System/Library/Frameworks/CoreGraphics.framework/Versions/A/CoreGraphics
+add /System/Library/Frameworks/CoreText.framework/Versions/A/CoreText \
+    /System/Library/Frameworks/CoreText.framework/Versions/A/CoreText
+add /System/Library/Frameworks/QuartzCore.framework/Versions/A/QuartzCore \
+    /System/Library/Frameworks/QuartzCore.framework/Versions/A/QuartzCore
+add /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation \
+    /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation
+
 mapfile -t objects < <(find "$OBJ/obj" -name '*.o' | sort)
 echo "linking ${#objects[@]} objects -> $OUT"
 "$LD" "${args[@]}" -o "$OUT" "${objects[@]}"
-
 echo "== exports"
 llvm-nm -gj --defined-only --arch=arm64 "$OUT" | wc -l
