@@ -32,6 +32,17 @@ echo "compiling ${#sources[@]} shim sources"
 fail=0
 for src in "${sources[@]}"; do
     obj="$OUT/obj/shim/$(echo "${src#$ROOT/Sources/}" | tr '/' '_' | sed 's/\.[cm]*$/.o/')"
+    # Only the sources that spell @import need Clang modules turned on. Enabling it
+    # for the whole set is a net loss: it makes the module map's umbrella headers
+    # shadow the ones included directly, which breaks 17 files that compile fine
+    # without it (48 objects with it scoped, 32 with it global).
+    modflags=()
+    if grep -q '@import' "$src" 2>/dev/null; then
+        modflags=(-fmodules)
+    elif grep -q '@import' "$ROOT/Sources/OpenSwiftUI_SPI/Shims/UIFoundation"/*.h 2>/dev/null &&
+         grep -rq 'UIFoundation' "$(dirname "$src")"/*.h 2>/dev/null; then
+        modflags=(-fmodules)
+    fi
     "$TC/clang" -c "$src" -o "$obj" \
         -target arm64-apple-macosx26.0 -isysroot "$SDK" -fobjc-arc \
         -I "$ROOT/Sources/COpenSwiftUI" \
@@ -39,6 +50,8 @@ for src in "${sources[@]}"; do
         -I "$INT/fw/System/Library/Frameworks" \
         -I "$INT/deps/debug" \
         -I "${OPENRENDERBOX_ROOT:-$INT/OpenRenderBox-build}/Sources/OpenRenderBoxCxx/include" \
+        -Xclang -fmodule-map-file="$ROOT/Sources/OpenSwiftUI_SPI/module.modulemap" \
+        "${modflags[@]}" \
         -DOPENSWIFTUI_NO_ADAPTIVE_IMAGE_GLYPH \
         -Wno-everything \
         || { echo "!! failed: ${src#$ROOT/}"; fail=$((fail + 1)); }
