@@ -6,6 +6,7 @@
 
 #if __has_include(<QuartzCore/CALayer.h>)
 
+#import "CALayerPrivate.h"
 #import "../OpenSwiftUIShims.h"
 #import <objc/runtime.h>
 
