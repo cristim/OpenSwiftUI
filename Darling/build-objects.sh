@@ -15,7 +15,16 @@ H=${PROTO_WS:-/home/cristi/src/.scratch-swiftui-fw}
 OUT=${1:?out dir}
 TC=/home/cristi/src/swift-darling/toolchain-linux/swift-6.3.3-RELEASE-ubuntu24.04-aarch64/usr/bin
 
-export LD_LIBRARY_PATH=/tmp/vd-swiftpm-libs
+# Scratch and the compat libs live off tmpfs: it is shared with other agents and has
+# been full, and a full tmpfs makes gen-build.py write an empty arg list that swiftc
+# reports as "no input files".
+AGENT_TMP=${AGENT_TMP:-/home/cristi/.local/share/agent-tmp/quartzcore}
+mkdir -p "$AGENT_TMP/swiftpm-libs" "$AGENT_TMP/locks"
+# The heavy-build lock is shared with the other sessions, so it stays at its
+# established path; only the per-branch locks live in the agent dir.
+HEAVY_BUILD_LOCK=${HEAVY_BUILD_LOCK:-/tmp/agent-locks/darling-heavy-build.lock}
+
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$AGENT_TMP/swiftpm-libs
 export TMPDIR="$OUT/tmp" CLANG_MODULE_CACHE_PATH="$OUT/ModuleCache"
 mkdir -p "$TMPDIR" "$OUT"
 
@@ -26,7 +35,7 @@ for t in OpenSwiftUICore OpenSwiftUI; do
         exit 1
     fi
     mapfile -t ARGS < "$OUT/$t.args"
-    flock -w 3600 /tmp/agent-locks/darling-heavy-build.lock nice -n 10 \
+    flock -w 3600 "$HEAVY_BUILD_LOCK" nice -n 10 \
         "$TC/swiftc" "${ARGS[@]}"
     echo "== $t rc=$?"
 done
