@@ -37,17 +37,23 @@ args=(-dylib -arch arm64 -platform_version macos 26.0 26.0 -syslibroot "$SDK"
 
 PREFIX=${PREFIX:?set PREFIX to a built Darling prefix}
 replaced=0
+prefix_args=()
 for pair in "${dylib_files[@]}"; do
     install=${pair%%:*}
     if [ -f "$PREFIX$install" ]; then
         # Keep the install name the objects' library ordinals refer to, but point it
-        # at the real implementation instead of the firstpass stub.
-        [ -n "${REPOINT:-}" ] && args+=(-dylib_file "$install:$PREFIX$install"); [ -n "${REPOINT:-}" ] || args+=(-dylib_file "$pair"); continue
+        # at the real implementation instead of the firstpass stub. These are held
+        # back rather than appended here, because the prefix map below re-adds the
+        # same install names and ld64 honours the FIRST -dylib_file it is given: a
+        # stub entry left in place shadows the real library, which is why 83 plain C
+        # functions (abort, calloc, CC_SHA1_*) stayed unresolved.
+        prefix_args+=(-dylib_file "$install:$PREFIX$install")
         replaced=$((replaced + 1))
     else
         args+=(-dylib_file "$pair")
     fi
 done
+args+=("${prefix_args[@]}")
 echo "repointed $replaced recorded system entries at the prefix copies"
 
 # The recorded flag set covers system libraries only. The app-facing frameworks, the
@@ -88,7 +94,7 @@ add /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGLU.dyli
 
 # The objects carry autolink entries recorded by -module-link-name (swiftCore,
 # swiftDispatch, swiftDarwin, ...). ld64 resolves those by searching for
-# lib<name>.dylib along -L/-F paths, which the -dylib_file map above does not
+# lib<name>.dylib along -L/-F paths, which passing the files as inputs does not
 # satisfy, so the runtime has to be findable by name too.
 args+=(-L "$PREFIX/usr/lib" -L "$PREFIX/usr/lib/system" -L "$PREFIX/usr/lib/swift")
 # Both levels: autolink resolves a framework by name against the parent, while a
@@ -100,26 +106,56 @@ while IFS= read -r fw; do
 done < <(find "$PREFIX/System/Library/Frameworks" "$PREFIX/System/Library/PrivateFrameworks" \
              -maxdepth 1 -mindepth 1 -name '*.framework' -type d 2>/dev/null | sort)
 
-# Map every library the prefix provides by its own install name. ld64 resolves a
-# dependency by install name and will not search for nested paths such as
-# ApplicationServices.framework/Versions/A/Frameworks/ATS.framework, so the whole
-# closure has to be present in the map. Reading LC_ID_DYLIB is one llvm-objdump per
-# image, so it runs in parallel and is cached in $OBJ/prefix-map.
-mapfile -t prefix_files < <(find "$PREFIX/usr/lib" "$PREFIX/System/Library/Frameworks" \
-    "$PREFIX/System/Library/PrivateFrameworks" -type f 2>/dev/null \
-    | grep -E '\.dylib$|/Versions/[A-Z]/[^/]+$' | sort)
-if [ ! -s "$OBJ/prefix-map" ]; then
-    printf '%s\n' "${prefix_files[@]}" | xargs -P 8 -I{} sh -c \
-        'id=$(llvm-objdump --macho --dylib-id "{}" 2>/dev/null); [ -n "$id" ] && printf "%s\t%s\n" "$id" "{}"' \
-        > "$OBJ/prefix-map"
-fi
-while IFS=$'\t' read -r id path; do
-    [ -n "$id" ] && args+=(-dylib_file "$id:$path")
-done < "$OBJ/prefix-map"
-echo "prefix map: $(wc -l < "$OBJ/prefix-map") install names"
-
 mapfile -t objects < <(find "$OBJ/obj" -name '*.o' | sort)
 echo "linking ${#objects[@]} objects -> $OUT"
-"$LD" "${args[@]}" -o "$OUT" "${objects[@]}"
+
+# The dependency closure is passed as ordinary link inputs, not as -dylib_file.
+# -dylib_file only records which file answers an install name; it does not add the
+# file to the symbol table, so an undefined symbol in a library reachable only
+# through libSystem.B's re-exports (abort, calloc, CC_SHA1_*, 83 of them) never
+# binds. Proven on a two-line repro: -dylib_file alone leaves _tan unresolved,
+# and the same library passed as an input resolves it.
+#
+# libSystem.B and everything under usr/lib/system go in wholesale, because ld64
+# walks their re-export chains and demands the whole closure be present.
+closure=("$PREFIX/usr/lib/libSystem.B.dylib")
+while IFS= read -r f; do
+    closure+=("$f")
+done < <(find "$PREFIX/usr/lib/system" -maxdepth 1 -name '*.dylib' | sort)
+while IFS= read -r f; do
+    closure+=("$f")
+done < <(find "$PREFIX/usr/lib/swift" -maxdepth 1 -name '*.dylib' | sort)
+for name in libobjc.A libdispatch libclosure libsystem_trace; do
+    [ -f "$PREFIX/usr/lib/$name.dylib" ] && closure+=("$PREFIX/usr/lib/$name.dylib")
+done
+while IFS= read -r f; do
+    closure+=("$f")
+done < <(find "$PREFIX/System/Library/Frameworks" "$PREFIX/System/Library/PrivateFrameworks" \
+             -maxdepth 3 -path '*/Versions/*/*' -type f 2>/dev/null | sort)
+
+echo "closure: ${#closure[@]} libraries"
+# Both mechanisms are needed, for different reasons.
+#   inputs        add the libraries to the symbol table, so their undefined symbols
+#                 can bind at all
+#   -dylib_file   tell ld64 which file answers a given install name, which is the only
+#                 way a dependency nested inside a framework resolves
+#                 (ApplicationServices.framework/Versions/A/Frameworks/ATS.framework)
+#                 and which keeps a recorded firstpass stub from shadowing a real one
+declare -A mapped=()
+for f in "${closure[@]}"; do
+    id=$(llvm-objdump --macho --dylib-id "$f" 2>/dev/null | tail -1)
+    [ -n "$id" ] && mapped["$id"]="$f"
+done
+for id in "${!mapped[@]}"; do
+    args+=(-dylib_file "$id:${mapped[$id]}")
+done
+echo "install names mapped: ${#mapped[@]}"
+
+"$LD" -dylib -arch arm64 -platform_version macos 26.0 26.0 -syslibroot "$SDK" \
+    -install_name "$INSTALL_NAME" -compatibility_version 1.0.0 -current_version 1.0.0 \
+    -L "$PREFIX/usr/lib" -L "$PREFIX/usr/lib/system" -L "$PREFIX/usr/lib/swift" \
+    -F "$PREFIX/System/Library/Frameworks" -F "$PREFIX/System/Library/PrivateFrameworks" \
+    "${args[@]}" \
+    -o "$OUT" "${closure[@]}" "${objects[@]}"
 echo "== exports"
 llvm-nm -gj --defined-only --arch=arm64 "$OUT" | wc -l
