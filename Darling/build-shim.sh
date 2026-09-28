@@ -72,8 +72,14 @@ for src in "${sources[@]}"; do
     # that exact diagnostic as fixed by using the modularised tree throughout, which is
     # what -F on fw/ does. The CG_BRIDGED_TYPE defines above are what this file needed
     # from the SDK headers, and they are enough on their own.
+    # OPENSWIFTUI_SWIFTUI_ABI=1 for the C compiles, as DARLING-DIVERGENCE.md records:
+    # the hand-written protocol-descriptor declarations and the @_silgen_name
+    # attributes spell the module the build actually uses. Without it they keep the
+    # open-source spelling and the descriptors stay undefined in the link closure,
+    # because the framework is built as SwiftUI.
     "$TC/clang" -c "$src" -o "$obj" \
         -target arm64-apple-macosx26.0 -isysroot "$SDK" -fobjc-arc \
+        -DOPENSWIFTUI_SWIFTUI_ABI=1 \
         '-DCF_BRIDGED_TYPE(...)=' '-DCG_BRIDGED_TYPE(...)=' \
         -I "$ROOT/Sources/COpenSwiftUI" \
         -I "$ROOT/Sources/OpenSwiftUI_SPI" \
