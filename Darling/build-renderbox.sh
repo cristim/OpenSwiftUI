@@ -79,7 +79,11 @@ echo "== RenderBox compile failures: $fail   objects: $(find "$OBJ" -name '*.o' 
 mapfile -t objs < <(find "$OBJ" -name '*.o' | sort)
 [ ${#objs[@]} -gt 0 ] || exit 1
 echo "== linking libRenderBox.dylib from ${#objs[@]} objects"
+# The SwiftUI objects reference these classes by their RB* names; the open-source
+# RenderBox defines them as ORB* since commit a288f58. Aliasing the symbols binds the
+# objects to the real class objects. See shim/renderbox-aliases.txt.
 "$LD" -dylib -arch arm64 -platform_version macos 26.0 26.0 -syslibroot "$SDK" \
+    ${RB_ALIAS_LIST:+-alias_list "$RB_ALIAS_LIST"} \
     -install_name /usr/lib/libRenderBox.dylib \
     -compatibility_version 1.0.0 -current_version 1.0.0 \
     -L "$PREFIX/usr/lib" -L "$PREFIX/usr/lib/system" -F "$PREFIX/System/Library/Frameworks" \

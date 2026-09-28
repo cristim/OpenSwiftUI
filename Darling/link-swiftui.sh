@@ -36,6 +36,7 @@ args=(-dylib -arch arm64 -platform_version macos 26.0 26.0 -syslibroot "$SDK"
 # search path find the real one.
 
 PREFIX=${PREFIX:?set PREFIX to a built Darling prefix}
+SIB=${SIB:?set SIB to the dir holding the linked sibling dylibs}
 replaced=0
 prefix_args=()
 for pair in "${dylib_files[@]}"; do
@@ -119,6 +120,13 @@ echo "linking ${#objects[@]} objects -> $OUT"
 # libSystem.B and everything under usr/lib/system go in wholesale, because ld64
 # walks their re-export chains and demands the whole closure be present.
 closure=("$PREFIX/usr/lib/libSystem.B.dylib")
+# Sibling reimplementations built by link-siblings.sh. They are inputs rather than
+# -dylib_file entries for the same reason the system libraries are: a file only in the
+# install-name map never contributes its symbols.
+for sib in "$SIB"/*.dylib; do
+    [ -f "$sib" ] || continue
+    closure+=("$sib")
+done
 while IFS= read -r f; do
     closure+=("$f")
 done < <(find "$PREFIX/usr/lib/system" -maxdepth 1 -name '*.dylib' | sort)
@@ -131,7 +139,8 @@ done
 while IFS= read -r f; do
     closure+=("$f")
 done < <(find "$PREFIX/System/Library/Frameworks" "$PREFIX/System/Library/PrivateFrameworks" \
-             -maxdepth 3 -path '*/Versions/*/*' -type f 2>/dev/null | sort)
+             -maxdepth 3 -path '*/Versions/*/*' -type f 2>/dev/null |
+         grep -vE '\.(before|after|orig|old|bak)[-.]' | sort)
 
 echo "closure: ${#closure[@]} libraries"
 # Both mechanisms are needed, for different reasons.
