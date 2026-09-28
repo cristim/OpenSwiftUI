@@ -187,7 +187,14 @@ extension NSAttributedString {
                 default: value
                 }
             }
-            let rect = boundingRect(
+            // The paragraph style carries the display truncation mode, and a
+            // truncating mode measures the string on a single unwrapped line, so
+            // the measurement comes back wider than the width it was offered and
+            // the caller places the item off the edge of its container.
+            // Measurement has to see the wrapped size: truncation applies once the
+            // line limit is reached, and `lineLimit` is accounted for below.
+            let measuringString = replacingLineBreakModes(.byWordWrapping)
+            let rect = measuringString.boundingRect(
                 with: CGSize(
                     width: normalized(requestedSize.width),
                     height: max(normalized(requestedSize.height), limitedFontHeight)
