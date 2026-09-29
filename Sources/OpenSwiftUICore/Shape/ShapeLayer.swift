@@ -49,17 +49,7 @@ struct ShapeLayerHelper: ResolvedPaintVisitor {
         }
 
         #if canImport(QuartzCore)
-        let color = (paint as? Color.Resolved)
-            ?? (paint as? AnchoredResolvedPaint<Color.Resolved>)?.paint
-        guard let color else {
-            layer.backgroundColor = nil
-            layer.borderColor = nil
-            layer.borderWidth = 0
-            layer.contents = nil
-            _openSwiftUIUnimplementedWarning()
-            return
-        }
-
+        let color = Self.requireLayerFill(for: paint)
         layer.contentsScale = contentsScale
         switch shapeType {
         case let .rect(_, radius, cornerStyle):
@@ -137,6 +127,33 @@ struct ShapeLayerHelper: ResolvedPaintVisitor {
         _ = contentsScale
         let bounds = path.boundingRect
         return bounds.isNull ? .zero : bounds
+    }
+
+    /// The colour a layer can be filled with, or nil when the paint is not one a
+    /// layer can express.
+    ///
+    /// A layer has exactly one fill colour, so this is a question with a real answer
+    /// rather than a best effort: a gradient, a material and an anchored paint are
+    /// all things it cannot be filled with.
+    static func layerFillColor<P>(for paint: P) -> Color.Resolved? where P: ResolvedPaint {
+        (paint as? Color.Resolved)
+            ?? (paint as? AnchoredResolvedPaint<Color.Resolved>)?.paint
+    }
+
+    /// The colour to fill a layer with, stopping when the paint is not one it can
+    /// express.
+    ///
+    /// This used to clear the layer and log a warning, which left the shape
+    /// unpainted with nothing to show for it and nothing on screen to explain it. A
+    /// paint reporting isCALayerCompatible == false reaches this deliberately: the
+    /// display list routes it here because the platform cannot take it, and no path
+    /// exists to take it another way. That is a missing feature rather than an
+    /// unexpected input, and it has to be visible as one.
+    static func requireLayerFill<P>(for paint: P) -> Color.Resolved where P: ResolvedPaint {
+        guard let color = layerFillColor(for: paint) else {
+            _openSwiftUIUnimplementedFailure()
+        }
+        return color
     }
 
     private static func layerType<P>(
