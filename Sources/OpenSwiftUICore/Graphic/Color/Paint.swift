@@ -50,7 +50,7 @@ package class AnyResolvedPaint: Equatable {
     package func encode(to encoder: inout ProtobufEncoder) throws { _openSwiftUIBaseClassAbstractMethod() }
     package static func == (lhs: AnyResolvedPaint, rhs: AnyResolvedPaint) -> Bool { lhs.isEqual(to: rhs) }
 
-    final func `as`<P>(type: P.Type) -> P? where P: ResolvedPaint {
+    package final func `as`<P>(type: P.Type) -> P? where P: ResolvedPaint {
         (self as? _AnyResolvedPaint<P>).map { $0.paint }
     }
 }

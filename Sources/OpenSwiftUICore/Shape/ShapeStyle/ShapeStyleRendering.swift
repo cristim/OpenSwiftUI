@@ -196,7 +196,6 @@ package struct _ShapeStyle_RenderedShape {
             // dropped fill leaves the shape unpainted and the caller with no reason.
             guard let gradientPaint = paint.as(type: GradientPaint.self) else {
                 _openSwiftUIUnimplementedFailure()
-                return
             }
             if style.effects.isEmpty {
                 // The same folding the colour branch does. A paint has no opacity of

@@ -81,12 +81,12 @@ package struct ResolvedGradient: Equatable {
     /// colour components untouched, which multiplying into the colours themselves
     /// would not.
     package func multiplyingOpacity(by factor: Float) -> ResolvedGradient {
-        guard factor != 1 else { return self }
         var copy = self
         copy.stops = stops.map { stop in
-            var color = stop.color
-            color.opacity = factor * color.opacity
-            return ResolvedGradient.Stop(color: color, location: stop.location)
+            ResolvedGradient.Stop(
+                color: stop.color.multiplyingOpacity(by: factor),
+                location: stop.location
+            )
         }
         return copy
     }
