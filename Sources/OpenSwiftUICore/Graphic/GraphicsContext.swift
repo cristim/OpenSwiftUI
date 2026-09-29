@@ -127,10 +127,28 @@ package enum PathDrawingStyle {
 public struct GraphicsContext {
     @usableFromInline
     final class Storage {
-        
+        /// The Core Graphics context this value draws into, when there is one.
+        ///
+        /// A `GraphicsContext` used to carry no context at all: every `draw` reached
+        /// an unimplemented warning, so there was nowhere for a paint to go. A
+        /// gradient is the first feature that has to hand real geometry to Core
+        /// Graphics, which needs somewhere to hand it to, so the context is carried
+        /// here and set by `renderingTo(cgContext:...)`, the entry point the
+        /// platform drawables already use.
+        #if canImport(Darwin)
+        var cgContext: CGContext?
+        #endif
     }
     
     var storage: Storage
+
+    /// The Core Graphics context this value draws into, or `nil` when it is not
+    /// attached to one.
+    #if canImport(Darwin)
+    package var cgContext: CGContext? {
+        storage.cgContext
+    }
+    #endif
     
     /// The ways that a graphics context combines new content with background
     /// content.
@@ -554,11 +572,40 @@ extension GraphicsContext {
     private func swiftUI_draw(_ path: Path, with shading: GraphicsContext.ResolvedShading, style: PathDrawingStyle)
     #endif
 
+    /// Draws a path filled with a resolved shading.
+    ///
+    /// `Color.Resolved.draw` forwards here, so this is the solid-fill path every
+    /// solid colour in a display list goes through. It reaches Core Graphics through
+    /// the C functions because this SDK's `CGContext` has no Swift methods.
     package func draw(_ path: Path, with shading: GraphicsContext.ResolvedShading, style: PathDrawingStyle) {
         #if OPENSWIFTUI_SWIFTUI_RENDERER
         swiftUI_draw(path, with: shading, style: style)
         #else
-        _openSwiftUIUnimplementedWarning()
+        switch shading {
+        case let .color(color):
+            #if canImport(Darwin)
+            guard let cgContext = cgContext else { return }
+            CGContextSaveGState(cgContext)
+            defer { CGContextRestoreGState(cgContext) }
+            CGContextAddPath(cgContext, path.cgPath)
+            CGContextSetRGBFillColor(
+                cgContext,
+                CGFloat(color.red), CGFloat(color.green), CGFloat(color.blue),
+                CGFloat(color.opacity)
+            )
+            CGContextFillPath(cgContext)
+            #endif
+        case let .levels(shadings):
+            // Levels are painted in order, each over the last, which is what a
+            // nested shading means.
+            for shading in shadings {
+                draw(path, with: shading, style: style)
+            }
+        default:
+            // Everything else needs a real shading backend; failing loudly is
+            // better than painting something the caller did not ask for.
+            _openSwiftUIUnimplementedWarning()
+        }
         #endif
     }
 
@@ -587,13 +634,24 @@ extension GraphicsContext {
         _openSwiftUIUnimplementedFailure()
     }
 
-    // FIXME
+    /// Renders `content` into a Core Graphics context.
+    ///
+    /// This is the production entry point: `PlatformDrawable` and the platform view
+    /// factory both come through here, so a paint that draws into
+    /// `GraphicsContext.cgContext` reaches Core Graphics on the same path a real
+    /// window does, rather than through a side door the headless gate alone uses.
     static func renderingTo(
         cgContext: CGContext,
         environment: EnvironmentValues,
         deviceScale: CGFloat?,
         content: (inout GraphicsContext) -> ()
     ) {
+        #if canImport(Darwin)
+        var context = GraphicsContext(storage: Storage())
+        context.storage.cgContext = cgContext
+        content(&context)
+        #else
         _openSwiftUIUnimplementedFailure()
+        #endif
     }
 }

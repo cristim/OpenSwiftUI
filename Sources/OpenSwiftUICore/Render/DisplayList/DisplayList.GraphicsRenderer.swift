@@ -41,8 +41,22 @@ extension DisplayList {
         var stateHashes: [StrongHash]
         package var platformViewMode: DisplayList.GraphicsRenderer.PlatformViewMode
         
+        /// Starts a renderer with nothing cached and no transition in progress.
+        ///
+        /// The cache and the animation state are per-renderer bookkeeping: there is
+        /// nothing to carry in from anywhere, so an empty cache and a zero time are
+        /// the honest starting values rather than a placeholder for something
+        /// unknown.
         package init(platformViewMode: DisplayList.GraphicsRenderer.PlatformViewMode) {
-            _openSwiftUIUnimplementedFailure()
+            self.oldCache = .init(callbacks: [:], animators: [:])
+            self.newCache = .init(callbacks: [:], animators: [:])
+            self.index = .init()
+            self.time = .init()
+            self.nextTime = .init()
+            self.stableIDs = nil
+            self.inTransitionGroup = false
+            self.stateHashes = []
+            self.platformViewMode = platformViewMode
         }
         
         package func render(at time: Time, do body: () -> Void) {
@@ -53,12 +67,100 @@ extension DisplayList {
             _openSwiftUIUnimplementedFailure()
         }
         
+        /// Draws a whole list, item by item.
         package func render(list: DisplayList, in ctx: inout GraphicsContext) {
-            _openSwiftUIUnimplementedFailure()
+            renderAll(of: list, in: &ctx)
         }
         
+        /// Draws one display list item.
+        ///
+        /// The walk mirrors `DisplayListStdoutRenderer`: a content item is drawn
+        /// through its own `draw`, an effect carries a nested list, and anything else
+        /// has nothing to paint. Content is handed to the paint rather than matched
+        /// here, so a new paint needs no change in this file and a gradient reaches
+        /// Core Graphics by the same route a solid colour does.
         package func render(item: DisplayList.Item, in ctx: inout GraphicsContext) {
-            _openSwiftUIUnimplementedFailure()
+            switch item.value {
+            case .content(let content):
+                render(content: content, frame: item.frame, in: &ctx)
+            case .effect(let effect, let list):
+                render(effect: effect, list: list, in: &ctx)
+            case .empty, .states:
+                break
+            }
+        }
+
+        private func renderAll(of list: DisplayList, in ctx: inout GraphicsContext) {
+            for item in list.items {
+                render(item: item, in: &ctx)
+            }
+        }
+
+        private func render(effect: DisplayList.Effect, list: DisplayList, in ctx: inout GraphicsContext) {
+            switch effect {
+            case .opacity(let alpha):
+                // The alpha goes on the context rather than into a layer, because a
+                // layer would rasterise the gradient before it could be read back.
+                guard let cgContext = ctx.cgContext else {
+                    renderAll(of: list, in: &ctx)
+                    return
+                }
+                CGContextSaveGState(cgContext)
+                CGContextSetAlpha(cgContext, CGFloat(alpha))
+                renderAll(of: list, in: &ctx)
+                CGContextRestoreGState(cgContext)
+            case .transform(.affine(let affine)):
+                guard let cgContext = ctx.cgContext else {
+                    renderAll(of: list, in: &ctx)
+                    return
+                }
+                CGContextSaveGState(cgContext)
+                CGContextConcatCTM(cgContext, affine)
+                renderAll(of: list, in: &ctx)
+                CGContextRestoreGState(cgContext)
+            default:
+                renderAll(of: list, in: &ctx)
+            }
+        }
+
+        private func render(
+            content: DisplayList.Content,
+            frame: CGRect,
+            in ctx: inout GraphicsContext
+        ) {
+            switch content.value {
+            case .color(let color):
+                color.draw(
+                    path: Path(frame),
+                    style: .fill(FillStyle()),
+                    in: ctx,
+                    bounds: frame
+                )
+            case .shape(let path, let paint, let fillStyle):
+                // The display list's shape case carries the FillStyle the caller
+                // asked for and the paint takes a PathDrawingStyle, so the caller's
+                // fill style is passed through rather than discarded for a default.
+                paint.draw(
+                    path: path,
+                    style: .fill(fillStyle),
+                    in: ctx,
+                    bounds: frame
+                )
+            case .flattened(let list, let offset, _):
+                // The offset is baked into the context's transform rather than into
+                // each item's frame, so a nested gradient resolves its unit geometry
+                // against the same bounds it would have had on screen.
+                guard let cgContext = ctx.cgContext else {
+                    renderAll(of: list, in: &ctx)
+                    return
+                }
+                CGContextSaveGState(cgContext)
+                CGContextTranslateCTM(cgContext, offset.x, offset.y)
+                renderAll(of: list, in: &ctx)
+                CGContextRestoreGState(cgContext)
+            default:
+                break
+            }
         }
         
         package func drawImplicitLayer(in ctx: inout GraphicsContext, content: (inout GraphicsContext) -> Void) {
