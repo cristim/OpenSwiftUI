@@ -40,6 +40,15 @@ extension DisplayList {
         var inTransitionGroup: Bool
         var stateHashes: [StrongHash]
         package var platformViewMode: DisplayList.GraphicsRenderer.PlatformViewMode
+
+        /// Alpha accumulated by the `.opacity` effects currently in scope.
+        ///
+        /// The factor is carried here rather than pushed onto the Core Graphics
+        /// context, because a context alpha is not honoured by every Core Graphics
+        /// this draws into: with it set, a fill comes out empty rather than
+        /// translucent. Accumulating it and folding it into each paint at draw time
+        /// works the same everywhere and treats every paint kind alike.
+        private var pendingOpacity: Float = 1
         
         /// Starts a renderer with nothing cached and no transition in progress.
         ///
@@ -99,16 +108,13 @@ extension DisplayList {
         private func render(effect: DisplayList.Effect, list: DisplayList, in ctx: inout GraphicsContext) {
             switch effect {
             case .opacity(let alpha):
-                // The alpha goes on the context rather than into a layer, because a
-                // layer would rasterise the gradient before it could be read back.
-                guard let cgContext = ctx.cgContext else {
-                    renderAll(of: list, in: &ctx)
-                    return
-                }
-                CGContextSaveGState(cgContext)
-                CGContextSetAlpha(cgContext, CGFloat(alpha))
+                // Nested opacity effects multiply, which is what the documented
+                // behaviour of applying opacity to a view whose opacity was already
+                // transformed is.
+                let previous = pendingOpacity
+                pendingOpacity = previous * alpha
                 renderAll(of: list, in: &ctx)
-                CGContextRestoreGState(cgContext)
+                pendingOpacity = previous
             case .transform(.affine(let affine)):
                 guard let cgContext = ctx.cgContext else {
                     renderAll(of: list, in: &ctx)
@@ -130,7 +136,7 @@ extension DisplayList {
         ) {
             switch content.value {
             case .color(let color):
-                color.draw(
+                color.multiplyingOpacity(by: pendingOpacity).draw(
                     path: Path(frame),
                     style: .fill(FillStyle()),
                     in: ctx,
@@ -140,7 +146,9 @@ extension DisplayList {
                 // The display list's shape case carries the FillStyle the caller
                 // asked for and the paint takes a PathDrawingStyle, so the caller's
                 // fill style is passed through rather than discarded for a default.
-                paint.draw(
+                // The same folding as the colour case, applied to whatever paint the
+                // caller asked for rather than to one kind of paint in particular.
+                paint.multiplyingOpacity(by: pendingOpacity).draw(
                     path: path,
                     style: .fill(fillStyle),
                     in: ctx,

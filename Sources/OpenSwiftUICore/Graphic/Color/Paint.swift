@@ -55,6 +55,32 @@ package class AnyResolvedPaint: Equatable {
     }
 }
 
+// MARK: - AnyResolvedPaint + opacity
+
+extension AnyResolvedPaint {
+    /// This paint with its alpha scaled by `factor`.
+    ///
+    /// An opacity effect has to end up somewhere the drawing can use it. Carrying it
+    /// on the context would be the obvious place, except a context alpha is not
+    /// honoured by every Core Graphics this draws into, so the factor is folded into
+    /// the paint instead. That is uniform across paint kinds rather than a concession
+    /// for one of them, and it is the same arithmetic the colour branch of a shape
+    /// style already does.
+    package func multiplyingOpacity(by factor: Float) -> AnyResolvedPaint {
+        if let gradient = self.as(type: GradientPaint.self) {
+            return _AnyResolvedPaint(GradientPaint(
+                gradient.gradient.multiplyingOpacity(by: factor),
+                extendsBeforeStart: gradient.extendsBeforeStart,
+                extendsAfterEnd: gradient.extendsAfterEnd
+            ))
+        }
+        if let color = self.as(type: Color.Resolved.self) {
+            return _AnyResolvedPaint(color.multiplyingOpacity(by: factor))
+        }
+        return self
+    }
+}
+
 // MARK: - _AnyResolvedPaint
 
 final package class _AnyResolvedPaint<P>: AnyResolvedPaint where P: ResolvedPaint {
