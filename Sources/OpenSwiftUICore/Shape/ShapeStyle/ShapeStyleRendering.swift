@@ -190,6 +190,28 @@ package struct _ShapeStyle_RenderedShape {
                 opacity = 1.0
             }
             render(color: resolved)
+        case let .paint(paint):
+            // Only a gradient is a paint this can turn into a display list shape. Any
+            // other paint stays loud rather than being quietly dropped, because a
+            // dropped fill leaves the shape unpainted and the caller with no reason.
+            guard let gradientPaint = paint.as(type: GradientPaint.self) else {
+                _openSwiftUIUnimplementedFailure()
+                return
+            }
+            if style.effects.isEmpty {
+                // The same folding the colour branch does. A paint has no opacity of
+                // its own for the display list to apply, so the accumulated opacity
+                // goes into the gradient's stops and the item's own opacity resets.
+                let folded = GradientPaint(
+                    gradientPaint.gradient.multiplyingOpacity(by: opacity),
+                    extendsBeforeStart: gradientPaint.extendsBeforeStart,
+                    extendsAfterEnd: gradientPaint.extendsAfterEnd
+                )
+                opacity = 1.0
+                render(paint: _AnyResolvedPaint(folded))
+            } else {
+                render(paint: paint)
+            }
         default:
             _openSwiftUIUnimplementedFailure()
         }
@@ -252,7 +274,30 @@ package struct _ShapeStyle_RenderedShape {
     }
 
     private mutating func render(paint: AnyResolvedPaint) {
-        _openSwiftUIUnimplementedFailure()
+        defer {
+            if let data = interpolatorData {
+                addEffect(.interpolatorLayer(data.group, serial: data.serial))
+                interpolatorData = nil
+            }
+        }
+        guard !paint.isClear else { return }
+        switch shape {
+        case let .path(path, fillStyle):
+            // The fill style is the caller's, not a default, and the paint goes into
+            // the shape case rather than through a rect: a rect here would be filled
+            // with one colour, which is the flattening this exists to avoid.
+            item.value = .content(DisplayList.Content(
+                .shape(path, paint, fillStyle),
+                seed: contentSeed
+            ))
+        case .empty:
+            break
+        case .text, .image, .alphaMask:
+            // These want a single colour to tint with, and a gradient has no such
+            // colour. Picking a stop would be the same flat fill the shape case
+            // above avoids, so this fails instead of guessing.
+            _openSwiftUIUnimplementedFailure()
+        }
     }
 
     private mutating func renderVectorGlyph(

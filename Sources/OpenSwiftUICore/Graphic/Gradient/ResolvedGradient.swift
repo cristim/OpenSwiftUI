@@ -72,6 +72,24 @@ package struct ResolvedGradient: Equatable {
             && a.colorSpace == b.colorSpace
             && a.stops == b.stops
     }
+
+    /// Scales every stop's alpha.
+    ///
+    /// The display list carries one opacity per item, not per paint, so a shape style
+    /// that has both a gradient and an opacity has to put the opacity somewhere. The
+    /// stops are where a gradient's alpha lives, and folding it in here keeps the
+    /// colour components untouched, which multiplying into the colours themselves
+    /// would not.
+    package func multiplyingOpacity(by factor: Float) -> ResolvedGradient {
+        guard factor != 1 else { return self }
+        var copy = self
+        copy.stops = stops.map { stop in
+            var color = stop.color
+            color.opacity = factor * color.opacity
+            return ResolvedGradient.Stop(color: color, location: stop.location)
+        }
+        return copy
+    }
 }
 
 extension Array where Element == ResolvedGradient.Stop {

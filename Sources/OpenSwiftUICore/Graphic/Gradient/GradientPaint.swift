@@ -40,6 +40,24 @@ package struct GradientPaint: ResolvedPaint {
         !gradient.stops.isEmpty && gradient.stops.allSatisfy { $0.color.opacity == 1 }
     }
 
+    /// True when no part of the gradient is visible.
+    ///
+    /// `Color.Resolved` reports clear at zero opacity, since one colour is the whole
+    /// of it. A gradient is clear when every stop is transparent, because then there
+    /// is no point along the axis that would put anything down. An empty gradient has
+    /// no stops and paints nothing, so it is clear for the same reason.
+    package var isClear: Bool {
+        gradient.stops.allSatisfy(\.color.isClear)
+    }
+
+    /// Not compatible with a CALayer.
+    ///
+    /// The layer path fills a view with `backgroundColor` and `contents`, which are
+    /// single colours, so a gradient taken that way would have to collapse to a stop
+    /// again. `DisplayListViewCache` reads this to send the item through a drawing
+    /// group instead, where the paint is handed to the context intact.
+    package var isCALayerCompatible: Bool { false }
+
     /// No leaf tag.
     ///
     /// `CodableResolvedPaint` reserves `linearGradient` (2) and `radialGradient` (3)
