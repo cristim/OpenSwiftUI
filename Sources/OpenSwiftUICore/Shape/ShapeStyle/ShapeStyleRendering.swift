@@ -190,6 +190,19 @@ package struct _ShapeStyle_RenderedShape {
                 opacity = 1.0
             }
             render(color: resolved)
+        case let .paint(paint):
+            // A gradient is a fill like any other, so it goes through the same
+            // shape content the colour path uses, carrying the paint rather than
+            // a single colour. Anything else the paint could be is not
+            // reachable yet, so it keeps the unimplemented failure.
+            if let gradient = paint.resolvedGradient {
+                if style.effects.isEmpty {
+                    opacity = 1.0
+                }
+                render(gradient: gradient, opacity: opacity, fill: paint)
+            } else {
+                _openSwiftUIUnimplementedFailure()
+            }
         default:
             _openSwiftUIUnimplementedFailure()
         }
@@ -253,6 +266,60 @@ package struct _ShapeStyle_RenderedShape {
 
     private mutating func render(paint: AnyResolvedPaint) {
         _openSwiftUIUnimplementedFailure()
+    }
+
+    /// Puts a gradient into the display list as a shape fill.
+    ///
+    /// The item carries the resolved gradient rather than a colour, so the item
+    /// that reaches the renderer still knows it is a gradient and can hand it to
+    /// CoreGraphics' gradient drawing. The opacity the style resolution arrived
+    /// at is folded into the gradient's stops, because CoreGraphics paints a
+    /// gradient's own component alphas and has no second opacity to apply.
+    private mutating func render(
+        gradient: ResolvedGradient,
+        opacity: Float,
+        fill: AnyResolvedPaint
+    ) {
+        // The item's frame is only assigned after the content is set, so the
+        // gradient takes the shape's own rect, which is the same rect the colour
+        // path moves the item's frame onto.
+        var shapeBounds = item.frame
+        if case let .path(path, _) = shape, let rect = path.rect() {
+            shapeBounds = rect
+        }
+        let scaled = ResolvedGradient(
+            stops: gradient.stops.map { stop in
+                ResolvedGradient.Stop(
+                    color: stop.color.multiplyingOpacity(by: opacity),
+                    location: stop.location
+                )
+            },
+            kind: gradient.kind,
+            bounds: shapeBounds,
+            colorSpace: gradient.colorSpace
+        )
+        guard !scaled.isClear else { return }
+        switch shape {
+        case let .path(path, fillStyle):
+            if let rect = path.rect() {
+                item.value = .content(DisplayList.Content(
+                    .shape(path, _AnyResolvedPaint(GradientPaint(gradient: scaled)), fillStyle),
+                    seed: contentSeed
+                ))
+                item.frame.origin.x += rect.origin.x
+                item.frame.origin.y += rect.origin.y
+                item.frame.size = rect.size
+            } else {
+                item.value = .content(DisplayList.Content(
+                    .shape(path, _AnyResolvedPaint(GradientPaint(gradient: scaled)), fillStyle),
+                    seed: contentSeed
+                ))
+            }
+        default:
+            // Text, images and masks keep their own handling; a gradient over
+            // them is not implemented.
+            break
+        }
     }
 
     private mutating func renderVectorGlyph(
