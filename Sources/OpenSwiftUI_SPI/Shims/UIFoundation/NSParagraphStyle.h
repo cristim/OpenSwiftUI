@@ -25,6 +25,12 @@
 @class NSTextList;
 @class NSTextBlock;
 
+// AppKit is what this package compiles against, so the classes come from there and the
+#import <AppKit/NSMutableParagraphStyle.h>
+
+#import <AppKit/NSParagraphStyle.h>
+#import <AppKit/NSTextTab.h>
+
 NS_HEADER_AUDIT_BEGIN(nullability, sendability)
 
 #if !__NSPARAGRAPH_STYLE_SHARED_SECTION__
@@ -84,53 +90,38 @@ typedef NSString * NSTextTabOptionKey NS_TYPED_ENUM API_AVAILABLE(macos(10.0), i
 OPENSWIFTUI_EXPORT NSTextTabOptionKey NSTabColumnTerminatorsAttributeName API_AVAILABLE(macos(10.0), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0)); // An attribute for NSTextTab options.  The value is NSCharacterSet.  The character set is used to determine the tab column terminating character.  The tab and newline characters are implied even if not included in the character set.
 
 OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0))
-@interface NSTextTab : NSObject <NSCopying, NSCoding, NSSecureCoding>
+@interface NSTextTab (OpenSwiftUI_SPI)
 
 + (NSCharacterSet *)columnTerminatorsForLocale:(nullable NSLocale *)aLocale API_AVAILABLE(macos(10.11), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0)); // Returns the column terminators for locale. Passing nil returns an instance corresponding to +[NSLocale systemLocale]. For matching user's formatting preferences, pass +[NSLocale currentLocale]. Can be used as the value for NSTabColumnTerminatorsAttributeName to make a decimal tab stop.
 
 #if OPENSWIFTUI_HAS_SDK_27_ADDITIONS
 - (instancetype)initWithTextAlignment:(NSTextAlignment)alignment location:(CGFloat)loc options:(NSDictionary<NSTextTabOptionKey, id> *)options NS_DESIGNATED_INITIALIZER; // Initializes a text tab with the text alignment, location, and options. The text alignment is used to determine the position of text inside the tab column.
 
-@property (readonly, NS_NONATOMIC_IOSONLY) NSTextAlignment alignment; // Defines the alignment of tab column contents.
 #endif
-@property (readonly, NS_NONATOMIC_IOSONLY) CGFloat location; // Location of the tab stop inside the line fragment rect coordinate system
-@property (readonly, NS_NONATOMIC_IOSONLY) NSDictionary<NSTextTabOptionKey, id> *options; // Optional configuration attributes
 @end
 
 
 // NSParagraphStyle
 OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(6.0), tvos(9.0), watchos(2.0), visionos(1.0))
-@interface NSParagraphStyle : NSObject <NSCopying, NSMutableCopying, NSSecureCoding>
+// AppKit is what this package compiles against, so the class comes from there and the
+
+@interface NSParagraphStyle (OpenSwiftUI_SPI)
 
 #if OPENSWIFTUI_HAS_SDK_27_ADDITIONS
-@property (readonly, NS_NONATOMIC_IOSONLY) NSTextAlignment alignment;
 
 #endif
-@property (class, readonly, copy, NS_NONATOMIC_IOSONLY) NSParagraphStyle *defaultParagraphStyle; // This class property returns a shared and cached NSParagraphStyle instance with the default style settings, with same value as the result of [[NSParagraphStyle alloc] init].
 
 + (NSWritingDirection)defaultWritingDirectionForLanguage:(nullable NSString *)languageName;  // languageName is in ISO lang region format
 
-@property (readonly, NS_NONATOMIC_IOSONLY) CGFloat lineSpacing; // "Leading": distance between the bottom of one line fragment and top of next (applied between lines in the same container). This value is included in the line fragment heights in layout manager.
-@property (readonly, NS_NONATOMIC_IOSONLY) CGFloat paragraphSpacing; // Distance between the bottom of this paragraph and top of next (or the beginning of its paragraphSpacingBefore, if any).
 
 // The following values are relative to the appropriate margin (depending on the paragraph direction)
 
-@property (readonly, NS_NONATOMIC_IOSONLY) CGFloat headIndent; // Distance from margin to front edge of paragraph
-@property (readonly, NS_NONATOMIC_IOSONLY) CGFloat tailIndent; // Distance from margin to back edge of paragraph; if negative or 0, from other margin
-@property (readonly, NS_NONATOMIC_IOSONLY) CGFloat firstLineHeadIndent; // Distance from margin to edge appropriate for text direction
 
-@property (readonly, NS_NONATOMIC_IOSONLY) CGFloat minimumLineHeight; // Line height is the distance from bottom of descenders to top of ascenders; basically the line fragment height. Does not include lineSpacing (which is added after this computation).
-@property (readonly, NS_NONATOMIC_IOSONLY) CGFloat maximumLineHeight; // 0 implies no maximum.
 
-@property (readonly, NS_NONATOMIC_IOSONLY) NSLineBreakMode lineBreakMode;
 
-@property (readonly, NS_NONATOMIC_IOSONLY) NSWritingDirection baseWritingDirection;
 
-@property (readonly, NS_NONATOMIC_IOSONLY) CGFloat lineHeightMultiple; // Natural line height is multiplied by this factor (if positive) before being constrained by minimum and maximum line height.
-@property (readonly, NS_NONATOMIC_IOSONLY) CGFloat paragraphSpacingBefore; // Distance between the bottom of the previous paragraph (or the end of its paragraphSpacing, if any) and the top of this paragraph.
 
 // Specifies the threshold for hyphenation.  Valid values lie between 0.0 and 1.0 inclusive.  Hyphenation will be attempted when the ratio of the text width as broken without hyphenation to the width of the line fragment is less than the hyphenation factor.  When this takes on its default value of 0.0, the layout manager's hyphenation factor is used instead.  When both are 0.0, hyphenation is disabled.
-@property (readonly, NS_NONATOMIC_IOSONLY) float hyphenationFactor;
 
 // A property controlling the hyphenation behavior for the paragraph associated with the paragraph style. The exact hyphenation logic is dynamically determined by the layout context such as language, platform, etc. When YES, it affects the return value from -hyphenationFactor when the property is set to 0.0.
 @property (readonly, NS_NONATOMIC_IOSONLY) BOOL usesDefaultHyphenation API_AVAILABLE(macos(12.0), ios(15.0), tvos(15.0), watchos(8.0), visionos(1.0));
@@ -149,31 +140,16 @@ OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(6.0), tvos(9.0), watchos(2.0),
 @property (readonly, NS_NONATOMIC_IOSONLY) NSLineBreakStrategy lineBreakStrategy API_AVAILABLE(macos(10.11), ios(9.0), tvos(9.0), watchos(2.0), visionos(1.0)); // Specifies the line break strategies that may be used for laying out the paragraph.  The default value is NSLineBreakStrategyNone.
 
 #if OPENSWIFTUI_HAS_SDK_27_ADDITIONS && OPENSWIFTUI_TARGET_OS_OSX
-@property (readonly) float tighteningFactorForTruncation; // Specifies the threshold for using tightening as an alternative to truncation when -allowsDefaultTighteningForTruncation=NO.
-@property (readonly) NSInteger headerLevel; // Specifies whether the paragraph is to be treated as a header for purposes of HTML generation.
 #endif
 
 @end
 
 
 OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(6.0), tvos(9.0), watchos(2.0), visionos(1.0))
-@interface NSMutableParagraphStyle : NSParagraphStyle
+@interface NSMutableParagraphStyle (OpenSwiftUI_SPI)
 
 #if OPENSWIFTUI_HAS_SDK_27_ADDITIONS
-@property (NS_NONATOMIC_IOSONLY) NSTextAlignment alignment;
 #endif
-@property (NS_NONATOMIC_IOSONLY) CGFloat lineSpacing;
-@property (NS_NONATOMIC_IOSONLY) CGFloat paragraphSpacing;
-@property (NS_NONATOMIC_IOSONLY) CGFloat firstLineHeadIndent;
-@property (NS_NONATOMIC_IOSONLY) CGFloat headIndent;
-@property (NS_NONATOMIC_IOSONLY) CGFloat tailIndent;
-@property (NS_NONATOMIC_IOSONLY) NSLineBreakMode lineBreakMode;
-@property (NS_NONATOMIC_IOSONLY) CGFloat minimumLineHeight;
-@property (NS_NONATOMIC_IOSONLY) CGFloat maximumLineHeight;
-@property (NS_NONATOMIC_IOSONLY) NSWritingDirection baseWritingDirection;
-@property (NS_NONATOMIC_IOSONLY) CGFloat lineHeightMultiple;
-@property (NS_NONATOMIC_IOSONLY) CGFloat paragraphSpacingBefore;
-@property (NS_NONATOMIC_IOSONLY) float hyphenationFactor;
 @property (readwrite, NS_NONATOMIC_IOSONLY) BOOL usesDefaultHyphenation API_AVAILABLE(macos(12.0), ios(15.0), tvos(15.0), watchos(8.0), visionos(1.0));
 @property (null_resettable, copy, NS_NONATOMIC_IOSONLY) NSArray<NSTextTab *> *tabStops API_AVAILABLE(macos(10.0), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0));
 @property (NS_NONATOMIC_IOSONLY) CGFloat defaultTabInterval API_AVAILABLE(macos(10.0), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0));
@@ -190,8 +166,6 @@ OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(6.0), tvos(9.0), watchos(2.0),
 - (void)setParagraphStyle:(NSParagraphStyle *)obj API_AVAILABLE(macos(10.0), ios(9.0), tvos(9.0), watchos(2.0), visionos(1.0));
 
 #if OPENSWIFTUI_HAS_SDK_27_ADDITIONS && OPENSWIFTUI_TARGET_OS_OSX
-@property float tighteningFactorForTruncation;
-@property NSInteger headerLevel;
 #endif
 
 @end
