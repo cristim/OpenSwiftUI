@@ -52,23 +52,12 @@ OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.11), ios(6.0), tvos(9.0), watchos(2.0)
 - (void)drawInRect:(CGRect)rect API_AVAILABLE(macos(10.0), ios(6.0), tvos(9.0), watchos(2.0), visionos(1.0));
 @end
 
-typedef NS_OPTIONS(NSInteger, NSStringDrawingOptions) {
-    NSStringDrawingUsesLineFragmentOrigin = 1 << 0, // The specified origin is the line fragment origin, not the base line origin
-    NSStringDrawingUsesFontLeading = 1 << 1, // Uses the font leading for calculating line heights
-    NSStringDrawingUsesDeviceMetrics = 1 << 3, // Uses image glyph bounds instead of typographic bounds
-    NSStringDrawingTruncatesLastVisibleLine API_AVAILABLE(macos(10.5), ios(6.0), tvos(9.0), watchos(2.0), visionos(1.0)) = 1 << 5, // Truncates and adds the ellipsis character to the last visible line if the text doesn't fit into the bounds specified. Ignored if NSStringDrawingUsesLineFragmentOrigin is not also set.
-    #if OPENSWIFTUI_HAS_SDK_26_ADDITIONS
-    /// Specifies the behavior for resolving ``NSTextAlignment.natural`` to the visual alignment.
-    ///
-    /// When set, the resolved visual alignment is determined by the resolved base writing direction; otherwise, it is using the user’s preferred language.
-    NSStringDrawingOptionsResolvesNaturalAlignmentWithBaseWritingDirection API_AVAILABLE(macos(26.0), ios(26.0), tvos(26.0), visionos(26.0), watchos(26.0)) = (1 << 9),
-    #endif
-    #if OPENSWIFTUI_TARGET_OS_OSX
-    NSStringDrawingDisableScreenFontSubstitution API_DEPRECATED("", macos(10.0,10.11)) = (1 << 2),
-    NSStringDrawingOneShot API_DEPRECATED("", macos(10.0,10.11)) = (1 << 4),
-    #endif
-}
-NS_SWIFT_NAME(NSString.DrawingOptions)
+
+// AppKit declares NSStringDrawingOptions itself, as an anonymous enum plus a typedef to
+// NSInteger, and declares the same option constants. Redeclaring them here is a
+// redefinition of both the constants and the type, and AppKit's copy is the one this
+// package compiles against, so it is the one that stands. The Swift name it needs lives
+// on cocotron's declaration instead.
 API_AVAILABLE(macos(10.0), ios(6.0), tvos(9.0), watchos(2.0), visionos(1.0));
 
 
