@@ -6,7 +6,15 @@
 //  Status: WIP
 
 public import OpenCoreGraphicsShims
+// The symbol API is the SFSymbols binary product, whose module is SFSymbols. Apple's SDK
+// happens to expose the same API as a framework called Symbols, which is why this import
+// is written that way upstream; no SDK here has one, so with the flag on we import the
+// product the flag asks for.
+#if OPENSWIFTUI_LINK_SFSYMBOLS
+public import SFSymbols
+#else
 public import Symbols
+#endif
 package import OpenRenderBoxShims
 
 // MARK: - ContentTransition [WIP]
