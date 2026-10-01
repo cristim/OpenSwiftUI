@@ -164,6 +164,9 @@ let linkTesting = envBoolValue("LINK_TESTING")
 
 let symbolLocatorCondition = envBoolValue("SYMBOL_LOCATOR", default: buildForDarwinPlatform)
 let openCombineCondition = envBoolValue("OPENCOMBINE", default: !buildForDarwinPlatform)
+// Defaults on, so platforms with a full Foundation overlay are unaffected. See
+// addOpenCombineSettings for why a platform may need it off.
+let openCombineFoundationCondition = envBoolValue("OPENCOMBINE_FOUNDATION", default: true)
 let swiftLogCondition = envBoolValue("SWIFT_LOG", default: !buildForDarwinPlatform)
 let swiftCryptoCondition = envBoolValue("SWIFT_CRYPTO", default: !buildForDarwinPlatform)
 let renderGTKCondition = envBoolValue("RENDER_GTK", default: !buildForDarwinPlatform)
@@ -442,7 +445,17 @@ extension Target {
 
     func addOpenCombineSettings() {
         dependencies.append(.product(name: "OpenCombine", package: "OpenCombine"))
-        dependencies.append(.product(name: "OpenCombineFoundation", package: "OpenCombine"))
+        // OpenCombineFoundation is the Foundation-backed layer: the RunLoop, Timer,
+        // NotificationCenter and OperationQueue schedulers, plus URLSession and
+        // PropertyListEncoder. It is separate because a Darwin SDK overlay must not
+        // redeclare Foundation's own classes, so those types come from the Clang
+        // Foundation, while PropertyListSerialization is Swift-only and has to be
+        // carried by the overlay. A platform whose overlay does not carry it cannot
+        // build this product, and nothing here needs it: Combine's core is what
+        // ObservableObject and Publisher are made of.
+        if openCombineFoundationCondition {
+            dependencies.append(.product(name: "OpenCombineFoundation", package: "OpenCombine"))
+        }
         var swiftSettings = swiftSettings ?? []
         swiftSettings.append(.define("OPENSWIFTUI_OPENCOMBINE"))
         self.swiftSettings = swiftSettings
