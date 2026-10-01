@@ -14,6 +14,7 @@
 
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
+#import <AppKit/NSTextAttachment.h>
 
 NS_HEADER_AUDIT_BEGIN(nullability, sendability)
 
@@ -53,10 +54,14 @@ API_AVAILABLE(macos(12.0), ios(15.0), tvos(15.0), watchos(8.0), visionos(1.0))
 
 @end
 
-OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0))
-@interface NSTextAttachment : NSObject <NSTextAttachmentLayout, NSSecureCoding>
 
-- (instancetype)initWithData:(nullable NSData *)contentData ofType:(nullable NSString *)uti NS_DESIGNATED_INITIALIZER API_AVAILABLE(macos(10.11), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0));
+// AppKit declares NSTextAttachment and most of this surface, so the shim's copy is a
+// category on AppKit's class and keeps only what AppKit is missing. A category cannot
+// carry a designated initializer, and AppKit declares this one anyway.
+OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0))
+@interface NSTextAttachment (OpenSwiftUI_SPI) <NSTextAttachmentLayout, NSSecureCoding>
+
+- (instancetype)initWithData:(nullable NSData *)contentData ofType:(nullable NSString *)uti API_AVAILABLE(macos(10.11), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0));
 
 #if OPENSWIFTUI_TARGET_OS_OSX
 - (instancetype)initWithFileWrapper:(nullable NSFileWrapper *)fileWrapper;
@@ -72,7 +77,6 @@ OPENSWIFTUI_EXPORT API_AVAILABLE(macos(10.0), ios(7.0), tvos(9.0), watchos(2.0),
 #endif
 
 @property (NS_NONATOMIC_IOSONLY) CGRect bounds API_AVAILABLE(macos(10.11), ios(7.0), tvos(9.0), watchos(2.0), visionos(1.0));
-@property (nullable, strong, NS_NONATOMIC_IOSONLY) NSFileWrapper *fileWrapper;
 
 #if OPENSWIFTUI_TARGET_OS_OSX
 @property (nullable, strong) id <NSTextAttachmentCell> attachmentCell API_AVAILABLE(macos(10.0)) API_UNAVAILABLE(ios, watchos, tvos, visionos);
