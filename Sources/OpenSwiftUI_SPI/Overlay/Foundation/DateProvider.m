@@ -6,6 +6,8 @@
 //  Status: Complete
 
 #include "DateProvider.h"
+#include "DatePattern.h"
+#include <stdlib.h>
 
 #if OPENSWIFTUI_TARGET_OS_DARWIN
 
@@ -38,14 +40,6 @@ NSCalendarUnit NSCalendarUnitSmallestUnit(NSCalendarUnit units) {
 
 extern BOOL LocaleIsCJK(NSLocale *locale);
 extern BOOL RemovesPunctuationFromWeekdayDay(NSLocale *locale);
-
-extern CFStringRef _Nullable _CFDateFormatterCreateSkeletonFromTemplate(
-    CFStringRef format,
-    CFLocaleRef locale,
-    CFOptionFlags options
-) CF_RETURNS_RETAINED;
-
-extern CFOptionFlags _CFCalendarGetUnitsFromDateFormat(CFStringRef format);
 
 static BOOL _isWeekdayDayTemplate(NSString *dateFormatTemplate) {
     return [dateFormatTemplate isEqualToString:@"EEE d"] ||
@@ -287,17 +281,24 @@ static NSString *_removePunctuationIfNecessaryFromTextForTemplate(
         return NSCalendarUnitHour;
     }
 
-    CFStringRef skeleton = _CFDateFormatterCreateSkeletonFromTemplate(
-        (__bridge CFStringRef)format,
-        (__bridge CFLocaleRef)self.locale,
-        0
-    );
-    if (skeleton == NULL) {
-        return 0;
-    }
-    NSCalendarUnit units = (NSCalendarUnit)_CFCalendarGetUnitsFromDateFormat(skeleton);
-    CFRelease(skeleton);
-    return NSCalendarUnitSmallestUnit(units);
+    // Scheduling needs the pattern fields, not a locale-dependent rendering.
+    // Read the public LDML pattern directly instead of private CF helpers.
+    NSUInteger length = format.length;
+    if (length > SIZE_MAX / sizeof(uint16_t)) return 0;
+    uint16_t *characters = malloc(length * sizeof(uint16_t));
+    if (characters == NULL) return 0;
+    [format getCharacters:characters range:NSMakeRange(0, length)];
+    OpenSwiftUIDatePatternUnit unit = OpenSwiftUIDatePatternSmallestUnit(characters, length);
+    free(characters);
+    static const NSCalendarUnit units[] = {
+        0, NSCalendarUnitNanosecond, NSCalendarUnitSecond,
+        NSCalendarUnitMinute, NSCalendarUnitHour, NSCalendarUnitDay,
+        NSCalendarUnitWeekday, NSCalendarUnitWeekdayOrdinal,
+        NSCalendarUnitWeekOfMonth, NSCalendarUnitWeekOfYear,
+        NSCalendarUnitMonth, NSCalendarUnitQuarter, NSCalendarUnitYear,
+        NSCalendarUnitYearForWeekOfYear, NSCalendarUnitEra,
+    };
+    return units[unit];
 }
 
 @end
