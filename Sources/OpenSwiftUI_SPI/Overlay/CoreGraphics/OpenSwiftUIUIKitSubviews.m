@@ -19,7 +19,6 @@
 
 // MARK: - UIKit Private API
 
-OPENSWIFTUI_EXPORT CALayer * _Nullable CALayerGetSuperlayer(CALayer *layer);
 
 @interface NSObject ()
 - (void)_invalidateSubviewCache;
@@ -35,7 +34,7 @@ void _OpenSwiftUIUIKitAddSubview(id child, id parent, NSInteger index) {
     if (count > index && sublayers[index] == childLayer) {
         return;
     }
-    if (CALayerGetSuperlayer(childLayer) != parentLayer) {
+    if ([childLayer superlayer] != parentLayer) {
         [parent openswiftui_insertRenderedSubview:child atIndex:(NSInteger)index];
     } else {
         NSUInteger nextIndex = index + 1;
