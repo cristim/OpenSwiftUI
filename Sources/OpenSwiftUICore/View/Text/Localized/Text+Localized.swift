@@ -394,7 +394,7 @@ public struct LocalizedStringKey: Equatable, ExpressibleByStringInterpolation {
     ) -> (arguments: [CVarArg], isUniqueSizeVariant: Bool) {
         var isUniqueSizeVariant = environment.textSizeVariant == .regular
         let resolvedArguments = arguments.map { argument -> CVarArg in
-            #if canImport(Darwin)
+            #if canImport(Darwin) && !OPENSWIFTUI_NO_MORPHOLOGY
             guard case let .text(text, token) = argument.storage,
                   case let .anyTextStorage(anyTextStorage) = text.storage,
                   let attributedStringStorage = anyTextStorage as? AttributedStringTextStorage,
