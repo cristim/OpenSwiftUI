@@ -10,7 +10,9 @@
 
 #include "OpenSwiftUIBase.h"
 
-#if OPENSWIFTUI_TARGET_OS_DARWIN
+// Matches the Swift side's canImport(Accessibility): without the framework, AccessibilityShims.swift
+// supplies AXChartDescriptor and nothing uses this category.
+#if OPENSWIFTUI_TARGET_OS_DARWIN && __has_include(<Accessibility/AXChartDescriptor.h>)
 
 #import <Accessibility/Accessibility.h>
 
@@ -23,6 +25,6 @@ OPENSWIFTUI_ASSUME_NONNULL_BEGIN
 
 OPENSWIFTUI_ASSUME_NONNULL_END
 
-#endif /* OPENSWIFTUI_TARGET_OS_DARWIN */
+#endif /* OPENSWIFTUI_TARGET_OS_DARWIN && __has_include(<Accessibility/AXChartDescriptor.h>) */
 
 #endif /* AXChartDescriptor_Private_h */
