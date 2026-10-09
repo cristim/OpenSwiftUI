@@ -16,7 +16,7 @@ import OpenAttributeGraphShims
 @_spi(ForOpenSwiftUIOnly)
 import OpenSwiftUICore
 
-@available(OpenSwiftUI_v6_0, *)
+@available(OpenSwiftUI_v7_0, *)
 @frozen
 public struct _TaskModifier2: ViewModifier {
     public var name: String
@@ -32,7 +32,7 @@ public struct _TaskModifier2: ViewModifier {
         name: String,
         executorPreference: (any TaskExecutor)?,
         priority: TaskPriority,
-        action: @escaping @isolated(any) () async -> Void
+        action: sending @escaping @isolated(any) () async -> Void
     ) {
         self.name = name
         self.executorPreference = executorPreference
@@ -89,17 +89,20 @@ public struct _TaskModifier2: ViewModifier {
         @State
         private var task: Task<Void, Never>?
 
+        private func start() -> Task<Void, Never> {
+            Task.detached(
+                name: base.name,
+                executorPreference: base.executorPreference,
+                priority: base.priority,
+                operation: base.action
+            )
+        }
+
         func body(content: Content) -> some View {
             content.modifier(_AppearanceActionModifier(
                 appear: {
                     guard task == nil else { return }
-                    let action = base.action
-                    task = Task.detached(
-                        name: base.name,
-                        executorPreference: base.executorPreference,
-                        priority: base.priority,
-                        operation: action
-                    )
+                    task = start()
                 },
                 disappear: {
                     if let task {
@@ -112,7 +115,7 @@ public struct _TaskModifier2: ViewModifier {
     }
 }
 
-@available(OpenSwiftUI_v6_0, *)
+@available(OpenSwiftUI_v7_0, *)
 @frozen
 public struct _TaskValueModifier2<Value>: ViewModifier where Value: Equatable {
     public var value: Value
@@ -131,7 +134,7 @@ public struct _TaskValueModifier2<Value>: ViewModifier where Value: Equatable {
         name: String,
         executorPreference: (any TaskExecutor)?,
         priority: TaskPriority,
-        action: @escaping @isolated(any) () async -> Void
+        action: sending @escaping @isolated(any) () async -> Void
     ) {
         self.value = value
         self.name = name
