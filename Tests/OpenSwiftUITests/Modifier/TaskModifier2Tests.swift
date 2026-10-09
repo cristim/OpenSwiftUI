@@ -7,6 +7,7 @@ import Testing
 
 @MainActor
 @Suite
+@available(OpenSwiftUI_v7_0, *)
 struct TaskModifier2Tests {
     // ABI note: these must keep mangling to the symbols imported by
     // SwiftUI-linked apps (module renamed to SwiftUI). The trailing `n` in

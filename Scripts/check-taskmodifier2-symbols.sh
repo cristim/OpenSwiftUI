@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
-# Usage: check-taskmodifier2-symbols.sh <built OpenSwiftUI library or object>
+# Usage: check-taskmodifier2-symbols.sh <built SwiftUI library or object>
 # Checks that the symbols apps import for _TaskModifier2/_TaskValueModifier2
-# are exported. Needs a built library; not run in CI.
+# are exported. The Darling build compiles as module SwiftUI, so the names are
+# matched literally. Needs a built artifact; not run in CI.
 set -euo pipefail
-lib=${1:?path to built OpenSwiftUI library}
+lib=${1:?path to built SwiftUI library or object}
+syms=$(nm -g "$lib")
 fail=0
+check() {
+  # Here-string, not a pipe: no SIGPIPE under pipefail.
+  grep -qF -- "$1" <<<"$syms"
+}
+# Negative control: a bogus name must be reported missing.
+if check '$s7SwiftUI14_TaskModifier2V_bogus_control_symbol'; then
+  echo "BROKEN   negative control matched"; exit 2
+fi
+echo "ok       negative control reports MISSING for a bogus name"
 for sym in \
   '$s7SwiftUI14_TaskModifier2V4name18executorPreference8priority6actionACSS_Sch_pSgScPyyYaYAcntcfC' \
   '$s7SwiftUI14_TaskModifier2VAA12ViewModifierAAMc' \
@@ -14,9 +25,7 @@ for sym in \
   '$s7SwiftUI19_TaskValueModifier2VyxGAA12ViewModifierAAMc' \
   '$s7SwiftUI19_TaskValueModifier2VMa' \
   '$s7SwiftUI19_TaskValueModifier2VMn'; do
-  # Built module is OpenSwiftUI; compare with the module name substituted.
-  want=${sym/7SwiftUI/11OpenSwiftUI}
-  if nm -g "$lib" 2>/dev/null | grep -qF -- "$want"; then
+  if check "$sym"; then
     echo "ok       $sym"
   else
     echo "MISSING  $sym"; fail=1
