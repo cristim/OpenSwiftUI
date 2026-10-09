@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Usage: check-taskmodifier2-symbols.sh <built SwiftUI library or object>
 # Checks that the symbols apps import for _TaskModifier2/_TaskValueModifier2
-# are exported. The Darling build compiles as module SwiftUI, so the names are
+# are defined and exported (needs llvm-nm). The Darling build compiles as module SwiftUI, so the names are
 # matched literally. Needs a built artifact; not run in CI.
 set -euo pipefail
 lib=${1:?path to built SwiftUI library or object}
-syms=$(nm -g "$lib")
+# The artifact is Mach-O; GNU nm may reject it, so llvm-nm is required.
+command -v llvm-nm >/dev/null || { echo "llvm-nm not found on PATH" >&2; exit 2; }
+syms=$(llvm-nm -g --defined-only "$lib")
 fail=0
 check() {
   # Here-string, not a pipe: no SIGPIPE under pipefail.
