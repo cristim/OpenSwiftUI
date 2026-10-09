@@ -9,10 +9,12 @@ import Testing
 @Suite
 struct TaskModifier2Tests {
     // ABI note: these must keep mangling to the symbols imported by
-    // SwiftUI-linked apps (module renamed to SwiftUI):
+    // SwiftUI-linked apps (module renamed to SwiftUI). The trailing `n` in
+    // `yyYaYAcn` comes from the `sending` action parameter; check built
+    // symbols with Scripts/check-taskmodifier2-symbols.sh:
     //   $s7SwiftUI14_TaskModifier2V4name18executorPreference8priority6actionACSS_Sch_pSgScPyyYaYAcntcfC
     //     = _TaskModifier2.init(name: String, executorPreference: (any TaskExecutor)?,
-    //                           priority: TaskPriority, action: @isolated(any) () async -> ())
+    //                           priority: TaskPriority, action: sending @isolated(any) () async -> ())
     //   $s7SwiftUI19_TaskValueModifier2V2id4name18executorPreference8priority6actionACyxGx_SSSch_pSgScPyyYaYAcntcfC
     //     = _TaskValueModifier2<Value>.init(id: Value, name: ..., same trailing parameters)
     // plus metadata accessor (Ma), nominal descriptor (Mn) and ViewModifier
