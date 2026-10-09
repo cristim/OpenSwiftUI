@@ -27,8 +27,10 @@ public struct _TaskModifier2: ViewModifier {
 
     nonisolated(unsafe) public var action: @isolated(any) () async -> Void
 
+    // nonisolated: inheriting ViewModifier's @preconcurrency @MainActor
+    // isolation drops `YA` (@isolated(any)) from the init's mangled name.
     @inlinable
-    public init(
+    nonisolated public init(
         name: String,
         executorPreference: (any TaskExecutor)?,
         priority: TaskPriority,
@@ -118,7 +120,7 @@ public struct _TaskModifier2: ViewModifier {
 @available(OpenSwiftUI_v7_0, *)
 @frozen
 public struct _TaskValueModifier2<Value>: ViewModifier where Value: Equatable {
-    public var value: Value
+    nonisolated(unsafe) public var value: Value
 
     public var name: String
 
@@ -128,8 +130,10 @@ public struct _TaskValueModifier2<Value>: ViewModifier where Value: Equatable {
 
     nonisolated(unsafe) public var action: @isolated(any) () async -> Void
 
+    // nonisolated: inheriting ViewModifier's @preconcurrency @MainActor
+    // isolation drops `YA` (@isolated(any)) from the init's mangled name.
     @inlinable
-    public init(
+    nonisolated public init(
         id value: Value,
         name: String,
         executorPreference: (any TaskExecutor)?,
