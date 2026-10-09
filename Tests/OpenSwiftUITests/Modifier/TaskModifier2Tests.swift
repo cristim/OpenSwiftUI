@@ -10,9 +10,10 @@ import Testing
 @available(OpenSwiftUI_v7_0, *)
 struct TaskModifier2Tests {
     // ABI note: these must keep mangling to the symbols imported by
-    // SwiftUI-linked apps (module renamed to SwiftUI). The trailing `n` in
-    // `yyYaYAcn` comes from the `sending` action parameter; check built
-    // symbols with Scripts/check-taskmodifier2-symbols.sh:
+    // SwiftUI-linked apps (module renamed to SwiftUI). The `n` in `yyYaYAcn`
+    // comes from `sending` (__owned in mangling); `YA` appears only because
+    // inits are `nonisolated` (dropped under inherited @MainActor @preconcurrency).
+    // Check built symbols with Scripts/check-taskmodifier2-symbols.sh:
     //   $s7SwiftUI14_TaskModifier2V4name18executorPreference8priority6actionACSS_Sch_pSgScPyyYaYAcntcfC
     //     = _TaskModifier2.init(name: String, executorPreference: (any TaskExecutor)?,
     //                           priority: TaskPriority, action: sending @isolated(any) () async -> ())
