@@ -36,7 +36,7 @@ extension Foundation.Progress {
         )
     }
 
-    #if canImport(ObjectiveC)
+    #if canImport(ObjectiveC) && !OPENSWIFTUI_NO_COMBINE_LATEST4
     // OpenCombine also support this API on Darwin since 0.16.0
     fileprivate typealias UIStatePublisher = Publishers.Map<
         Publishers.CombineLatest4<
