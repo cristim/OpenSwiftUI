@@ -92,6 +92,7 @@ for src in "${sources[@]}"; do
         -Xclang -fmodule-map-file="$ROOT/Sources/OpenSwiftUI_SPI/module.modulemap" \
         "${modflags[@]}" "${stdflags[@]}" "${orbflags[@]}" \
         -DOPENSWIFTUI_NO_ADAPTIVE_IMAGE_GLYPH \
+        -DOPENSWIFTUI_NO_MORPHOLOGY=1 -DOPENSWIFTUI_NO_COMBINE_LATEST4=1 \
         -Wno-everything \
         || { echo "!! failed: ${src#$ROOT/}"; fail=$((fail + 1)); }
 done
