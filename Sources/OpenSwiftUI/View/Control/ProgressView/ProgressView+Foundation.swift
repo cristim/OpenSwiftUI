@@ -36,8 +36,8 @@ extension Foundation.Progress {
         )
     }
 
-    #if canImport(ObjectiveC)
-    // OpenCombine also support this API on Darwin since 0.16.0
+    #if canImport(ObjectiveC) && !OPENSWIFTUI_OPENCOMBINE
+    // Apple's KVO publisher belongs to Combine, not OpenCombine.
     fileprivate typealias UIStatePublisher = Publishers.Map<
         Publishers.CombineLatest4<
             NSObject.KeyValueObservingPublisher<Foundation.Progress, Int64>,
