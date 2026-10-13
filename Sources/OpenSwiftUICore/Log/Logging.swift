@@ -340,3 +340,35 @@ package func _openSwiftUIPlatformUnimplementedWarning(_ function: String = #func
     #endif
     #endif
 }
+
+// MARK: - Darling addition: capability-absent reporting
+
+private final class CapabilityAbsentRegistry: @unchecked Sendable {
+    private let lock = NSLock()
+    private var reported: Set<String> = []
+
+    /// Returns true the first time `name` is recorded.
+    func record(_ name: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return reported.insert(name).inserted
+    }
+}
+
+private let capabilityAbsentRegistry = CapabilityAbsentRegistry()
+
+/// Reports that the host lacks a private capability (an `OPENSWIFTUI_NO_<CAPABILITY>` build flag is set).
+///
+/// Logs once per capability name. When `affectsValue` is true the missing capability
+/// changes a layout or text metric value, so a build with `OPENSWIFTUI_DEVELOPMENT` traps.
+package func _darlingCapabilityAbsent(_ capability: StaticString, affectsValue: Bool = false, file: StaticString = #fileID, line: UInt = #line) {
+    let name = capability.description
+    #if OPENSWIFTUI_DEVELOPMENT
+    if affectsValue {
+        preconditionFailure("Capability absent: \(name)", file: file, line: line)
+    }
+    #endif
+    if capabilityAbsentRegistry.record(name) {
+        Log.internalError("Capability absent on this host: \(name)", file: file, line: line)
+    }
+}
