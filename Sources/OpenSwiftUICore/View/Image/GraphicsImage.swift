@@ -118,6 +118,10 @@ package struct GraphicsImage: Equatable, Sendable {
         else {
             return .standard
         }
+        #if OPENSWIFTUI_NO_CG_HEADROOM_SPI
+        _darlingCapabilityAbsent("cgImageHeadroom")
+        return CGColorSpaceIsHLGBased(colorSpace) ? .highHLG : .high
+        #else
         var headroom: Float = .zero
         guard CGImageGetHeadroom(image, &headroom) || headroom > 0 else {
             if CGColorSpaceIsHLGBased(colorSpace) {
@@ -127,6 +131,7 @@ package struct GraphicsImage: Equatable, Sendable {
             }
         }
         return .init(rawValue: CGFloat(headroom))
+        #endif
         #else
         _openSwiftUIPlatformUnimplementedFailure()
         #endif

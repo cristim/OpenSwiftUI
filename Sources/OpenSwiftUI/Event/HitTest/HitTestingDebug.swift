@@ -172,9 +172,11 @@ extension NSView: HitTestTracing {
            let value = customizing.customAcceptsFirstMouse {
             properties.append(("acceptsFirstMouse", "\(value)"))
         }
+        #if !OPENSWIFTUI_NO_HISERVICES_AX_SPI
         if self is any HostingViewProtocol, AXIsClientMakingRequest() {
             properties.append(("isAccessibilityRequest", "true"))
         }
+        #endif
         return properties
     }
 
