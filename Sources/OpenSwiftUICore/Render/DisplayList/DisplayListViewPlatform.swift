@@ -2116,7 +2116,11 @@ extension [GraphicsFilter] {
         drawable: @autoclosure () -> PlatformDrawable?
     ) -> Color.Resolved? {
         #if OPENSWIFTUI_NO_CACONTENTSSWIZZLE
-        // contentsMultiplyColor is private: leave colorMultiply in the filter list.
+        // contentsMultiplyColor is private: leave colorMultiply in the filter list,
+        // which still needs the private CAFilter multiplyColor path.
+        if case .colorMultiply = last {
+            _darlingCapabilityAbsent("contentsMultiplyColor")
+        }
         return nil
         #else
         guard case let .colorMultiply(color) = last,
