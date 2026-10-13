@@ -95,6 +95,7 @@ for src in "${sources[@]}"; do
         -DOPENSWIFTUI_NO_MORPHOLOGY=1 -DOPENSWIFTUI_NO_COMBINE_LATEST4=1 \
         -DOPENSWIFTUI_NO_CG_HEADROOM_SPI=1 -DOPENSWIFTUI_NO_HISERVICES_AX_SPI=1 \
         -DOPENSWIFTUI_NO_CVDISPLAYLINK_PAUSE=1 \
+        -DOPENSWIFTUI_NO_CORETEXT_SPI=1 \
         -Wno-everything \
         || { echo "!! failed: ${src#$ROOT/}"; fail=$((fail + 1)); }
 done
