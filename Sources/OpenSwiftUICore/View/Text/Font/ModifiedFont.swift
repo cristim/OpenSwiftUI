@@ -666,6 +666,12 @@ extension Font {
             guard !context.shouldRedactContent else {
                 return
             }
+            #if OPENSWIFTUI_NO_CORETEXT_SPI
+            guard kCTFontGradeTrait != nil else {
+                _darlingCapabilityAbsent("fontGrade")
+                return
+            }
+            #endif
             descriptor = CTFontDescriptorCreateCopyWithAttributes(
                 descriptor,
                 [

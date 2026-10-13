@@ -59,6 +59,7 @@ package func CTFontDescriptorCreateForUIType(
 
 // MARK: - CTFont private API
 
+#if !OPENSWIFTUI_NO_CORETEXT_SPI
 @_silgen_name("CTFontCopySystemUIFontExcessiveLineHeightCharacterSet")
 package func CTFontCopySystemUIFontExcessiveLineHeightCharacterSet() -> CFCharacterSet?
 
@@ -82,6 +83,7 @@ package func CTFontGetClippingMetrics(
     _ ascent: UnsafeMutablePointer<CGFloat>,
     _ descent: UnsafeMutablePointer<CGFloat>
 ) -> Bool
+#endif
 
 @_silgen_name("CTFontIsSystemUIFont")
 package func CTFontIsSystemUIFont(_ font: CTFont) -> Bool
@@ -89,11 +91,14 @@ package func CTFontIsSystemUIFont(_ font: CTFont) -> Bool
 @_silgen_name("CTFontGetWeight")
 package func CTFontGetWeight(_ font: CTFont) -> CGFloat
 
+#if !OPENSWIFTUI_NO_CORETEXT_SPI
 @_silgen_name("CTFontGetAccessibilityBoldWeightOfWeight")
 package func CTFontGetAccessibilityBoldWeightOfWeight(_ weight: CGFloat) -> CGFloat
+#endif
 
 // MARK: - TraitKey
 
+#if !OPENSWIFTUI_NO_CORETEXT_SPI
 @_silgen_name("kCTFontUIFontDesignTrait")
 let kCTFontUIFontDesignTrait: CFString
 
@@ -155,11 +160,13 @@ let kCTUIFontTextStyleCaption3: CFString
 
 @_silgen_name("kCTUIFontTextStyleFootnote2")
 let kCTUIFontTextStyleFootnote2: CFString
+#endif
 
 let kUICTFontTextStyleShortCaption1: CFString = "UICTFontTextStyleShortCaption1" as CFString
 
 let kUICTFontTextStyleShortCaption2: CFString = "UICTFontTextStyleShortCaption2" as CFString
 
+#if !OPENSWIFTUI_NO_CORETEXT_SPI
 // MARK: - CTFontDesign
 
 @_silgen_name("kCTFontUIFontDesignDefault")
@@ -223,6 +230,7 @@ let kCTFontContentSizeCategoryAccessibilityXXL: CFString
 
 @_silgen_name("kCTFontContentSizeCategoryAccessibilityXXXL")
 let kCTFontContentSizeCategoryAccessibilityXXXL: CFString
+#endif
 
 // MARK: - CTFontWeight
 
@@ -263,8 +271,10 @@ extension CTAdaptiveImageGlyph {
 
 // MARK: - Attribute Name
 
+#if !OPENSWIFTUI_NO_CORETEXT_SPI
 @_silgen_name("kCTTextScaleRatioAttributeName")
 let kCTTextScaleRatioAttributeName: CFString
+#endif
 
 @_silgen_name("NSTextEncapsulationAttributeName")
 let NSTextEncapsulationAttributeName: NSAttributedString.Key
