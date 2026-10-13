@@ -198,7 +198,6 @@ extension DisplayList.ViewUpdater {
                             modifiedGroups.insert(ObjectIdentifier(group))
                         }
                     } else {
-                    #endif
                         let animation = CABasicAnimation(keyPath: pending.keyPath)
                         animation.beginTime = -1
                         animation.duration = 1
@@ -207,8 +206,16 @@ extension DisplayList.ViewUpdater {
                         animation.isRemovedOnCompletion = false
                         layer.add(animation, forKey: pending.keyPath)
                         asyncValueArray.animations.insert(pending.keyPath)
-                    #if !OPENSWIFTUI_NO_CAPRESENTATIONMODIFIER
                     }
+                    #else
+                    let animation = CABasicAnimation(keyPath: pending.keyPath)
+                    animation.beginTime = -1
+                    animation.duration = 1
+                    animation.fillMode = .forwards
+                    animation.toValue = pending.value
+                    animation.isRemovedOnCompletion = false
+                    layer.add(animation, forKey: pending.keyPath)
+                    asyncValueArray.animations.insert(pending.keyPath)
                     #endif
                 }
                 asyncValues[layerID] = asyncValueArray
