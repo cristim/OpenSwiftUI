@@ -14,9 +14,9 @@
 //  getters and constants, and the kCTFontWidth* constants.
 
 #if canImport(CoreText) && OPENSWIFTUI_NO_CORETEXT_SPI
-import CoreText
-import CoreFoundation
-import Foundation
+package import CoreText
+package import CoreFoundation
+package import Foundation
 
 // MARK: - Functions
 
