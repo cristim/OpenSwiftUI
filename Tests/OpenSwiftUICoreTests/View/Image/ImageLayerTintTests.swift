@@ -30,7 +30,8 @@ struct ImageLayerTintTests {
             orientation: .up,
             isTemplate: false
         )
-        image.maskColor = Color.red.resolve(in: EnvironmentValues())
+        let tint = Color.red.resolve(in: EnvironmentValues())
+        image.maskColor = tint
         let layer = ImageLayer()
         layer.update(image: image, size: CGSize(width: 2, height: 1))
 
@@ -41,7 +42,12 @@ struct ImageLayerTintTests {
         ))
         readback.draw(tinted, in: CGRect(x: 0, y: 0, width: 2, height: 1))
         let pixels = try #require(readback.data).assumingMemoryBound(to: UInt8.self)
-        #expect(pixels[0] == 255 && pixels[1] == 0 && pixels[2] == 0 && pixels[3] == 255)
+        func byte(_ value: Float) -> Int { Int((min(max(value, 0), 1) * 255).rounded()) }
+        // Allow one level of rounding error from the 8-bit round trip.
+        #expect(abs(Int(pixels[0]) - byte(tint.red)) <= 1)
+        #expect(abs(Int(pixels[1]) - byte(tint.green)) <= 1)
+        #expect(abs(Int(pixels[2]) - byte(tint.blue)) <= 1)
+        #expect(pixels[3] == 255)
         #expect(pixels[7] == 0)
     }
 }

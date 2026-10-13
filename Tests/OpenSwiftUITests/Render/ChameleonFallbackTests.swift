@@ -15,8 +15,7 @@ struct ChameleonFallbackTests {
     @Test
     func chameleonColorFallsBackToGraphicsView() {
         let view = NSViewPlatformViewDefinition.makeView(kind: .chameleonColor)
-        #expect(view is NSView)
-        #expect(String(describing: type(of: (view as! NSView).layer)).contains("Chameleon") == false)
+        #expect(view is _NSGraphicsView)
     }
 }
 #endif
