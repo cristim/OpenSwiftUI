@@ -421,10 +421,13 @@ extension DisplayList.ViewUpdater.Platform {
                 #else
                 _openSwiftUIPlatformUnimplementedWarning()
                 #endif
-            case .chameleonColor:
+            case let .chameleonColor(fallback, _):
                 if viewInfo.state.kind != .chameleonColor {
                     viewInfo = _makeItemView(item: item, state: state)
                 }
+                #if canImport(QuartzCore) && OPENSWIFTUI_NO_CACHAMELEONLAYER
+                viewInfo.layer.backgroundColor = fallback.cgColor
+                #endif
             case let .image(image):
                 if viewInfo.state.kind != .image {
                     viewInfo = _makeItemView(item: item, state: state)
