@@ -88,8 +88,13 @@ final package class ImageLayer: CALayer {
             minificationFilter = .linear
             magnificationFilter = .linear
         case .high:
+            #if OPENSWIFTUI_NO_CAFILTERBOX
+            // kCAFilterBox is private; trilinear is the documented high-quality minification filter.
+            minificationFilter = .trilinear
+            #else
             // Use box filter for high-quality minification
             minificationFilter = .box
+            #endif
             magnificationFilter = .linear
         }
 

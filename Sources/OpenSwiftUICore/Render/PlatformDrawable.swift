@@ -192,6 +192,11 @@ public struct PlatformDrawableOptions: Equatable, Sendable {
 
     #if canImport(QuartzCore)
     public var caLayerContentsFormat: CALayerContentsFormat {
+        #if OPENSWIFTUI_NO_CA_A8_FORMAT
+        // kCAContentsFormatAutomatic and kCAContentsFormatA8 are private. An RGBA8
+        // buffer still carries alpha, so alphaOnly costs memory only (4x).
+        return .RGBA8Uint
+        #else
         var format = CALayerContentsFormat.automatic
         if base.flags.contains(.rgbaContext) {
             format = .RGBA8Uint
@@ -200,6 +205,7 @@ public struct PlatformDrawableOptions: Equatable, Sendable {
             format = .A8
         }
         return format
+        #endif
     }
     #endif
 
