@@ -54,7 +54,9 @@ extension DisplayList.ViewUpdater {
 
         private struct AsyncValues {
             var animations: Set<String>
+            #if !OPENSWIFTUI_NO_CAPRESENTATIONMODIFIER
             var modifiers: [String: CAPresentationModifier]
+            #endif
         }
 
         private var asyncValues: [ObjectIdentifier: AsyncValues] = [:]
@@ -67,7 +69,9 @@ extension DisplayList.ViewUpdater {
 
         private var pendingAsyncValues: [ObjectIdentifier: [PendingAsyncValue]] = [:]
 
+        #if !OPENSWIFTUI_NO_CAPRESENTATIONMODIFIER
         var asyncModifierGroup: CAPresentationModifierGroup?
+        #endif
 
         var pendingAsyncUpdates: [() -> Void] = []
 
@@ -90,13 +94,17 @@ extension DisplayList.ViewUpdater {
                 for animation in asyncValueArray.animations {
                     layer.removeAnimation(forKey: animation)
                 }
+                #if !OPENSWIFTUI_NO_CAPRESENTATIONMODIFIER
                 for modifier in asyncValueArray.modifiers.values {
                     layer.remove(modifier)
                 }
+                #endif
             }
             #endif
             asyncValues = [:]
+            #if !OPENSWIFTUI_NO_CAPRESENTATIONMODIFIER
             asyncModifierGroup = nil
+            #endif
         }
 
         @inline(__always)
@@ -151,13 +159,20 @@ extension DisplayList.ViewUpdater {
             if !savedDisableActions {
                 CATransaction.setDisableActions(true)
             }
+            #if !OPENSWIFTUI_NO_CAPRESENTATIONMODIFIER
             // Track which modifier groups need flushing
             var modifiedGroups: Set<ObjectIdentifier> = []
+            #endif
             // Apply each pending async value to its layer
             for (layerID, pendingAsyncValueArray) in pendingAsyncValues {
                 let layer = unsafeBitCast(layerID, to: CALayer.self)
+                #if !OPENSWIFTUI_NO_CAPRESENTATIONMODIFIER
                 var asyncValueArray = asyncValues[layerID, default: .init(animations: [], modifiers: [:])]
+                #else
+                var asyncValueArray = asyncValues[layerID, default: .init(animations: [])]
+                #endif
                 for pending in pendingAsyncValueArray {
+                    #if !OPENSWIFTUI_NO_CAPRESENTATIONMODIFIER
                     if pending.usesPresentationModifier {
                         if let existing = asyncValueArray.modifiers[pending.keyPath] {
                             existing.value = pending.value
@@ -183,6 +198,7 @@ extension DisplayList.ViewUpdater {
                             modifiedGroups.insert(ObjectIdentifier(group))
                         }
                     } else {
+                    #endif
                         let animation = CABasicAnimation(keyPath: pending.keyPath)
                         animation.beginTime = -1
                         animation.duration = 1
@@ -191,7 +207,9 @@ extension DisplayList.ViewUpdater {
                         animation.isRemovedOnCompletion = false
                         layer.add(animation, forKey: pending.keyPath)
                         asyncValueArray.animations.insert(pending.keyPath)
+                    #if !OPENSWIFTUI_NO_CAPRESENTATIONMODIFIER
                     }
+                    #endif
                 }
                 asyncValues[layerID] = asyncValueArray
             }
@@ -199,11 +217,13 @@ extension DisplayList.ViewUpdater {
             if !savedDisableActions {
                 CATransaction.setDisableActions(false)
             }
+            #if !OPENSWIFTUI_NO_CAPRESENTATIONMODIFIER
             // Flush modified presentation modifier groups
             for groupID in modifiedGroups {
                 let group = unsafeBitCast(groupID, to: CAPresentationModifierGroup.self)
                 group.flushWithTransaction()
             }
+            #endif
             // Execute all completion closures
             for update in pendingAsyncUpdates {
                 update()

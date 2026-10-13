@@ -18,7 +18,11 @@ protocol _DisplayList_ViewUpdater_AsyncLayerProperty {
 }
 
 extension _DisplayList_ViewUpdater_AsyncLayerProperty {
+    #if OPENSWIFTUI_NO_CAPRESENTATIONMODIFIER
+    static var supportsPresentationModifier: Bool { false }
+    #else
     static var supportsPresentationModifier: Bool { true }
+    #endif
 }
 
 extension DisplayList.ViewUpdater {
