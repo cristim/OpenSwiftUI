@@ -20,7 +20,7 @@ typedef OPENSWIFTUI_ENUM(uint8_t, CTCompositionLanguage) {
 
 OPENSWIFTUI_EXTERN_C_BEGIN
 
-#if __has_include(<CoreText/CoreText.h>)
+#if __has_include(<CoreText/CoreText.h>) && !OPENSWIFTUI_NO_CORETEXT_SPI
 
 CTCompositionLanguage CTParagraphStyleGetCompositionLanguageForLanguage(CFStringRef language);
 
