@@ -146,10 +146,13 @@ final package class ImageLayer: CALayer {
         guard let contents else {
             return nil
         }
-        guard let image = contents as? CGImage else {
-            _darlingCapabilityAbsent("contentsSwizzle", affectsValue: true)
+        // `as? CGImage` from Any always succeeds for CF types, so check the type ID (excludes IOSurface).
+        let object = contents as AnyObject
+        guard CFGetTypeID(object) == CGImage.typeID else {
+            _darlingCapabilityAbsent("contentsSwizzle")
             return contents
         }
+        let image = unsafeDowncast(object, to: CGImage.self)
         guard let space = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(
                 data: nil,
