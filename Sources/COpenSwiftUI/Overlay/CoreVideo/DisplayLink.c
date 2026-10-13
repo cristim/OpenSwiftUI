@@ -11,11 +11,24 @@
 
 #include <os/lock.h>
 #include <stdatomic.h>
+#include <stdio.h>
 
 // The C source only needs this QuartzCore function. Importing the framework
 // umbrella also pulls Objective-C layer declarations into this translation unit.
 extern CFTimeInterval CACurrentMediaTime(void);
+#if OPENSWIFTUI_NO_CVDISPLAYLINK_PAUSE
+// Public Stop/Start stand in for the private pause; failures are reported, not dropped.
+static void openswiftui_display_link_set_paused(CVDisplayLinkRef displayLink, bool paused) {
+    if (CVDisplayLinkIsRunning(displayLink) != paused) return;
+    CVReturn result = paused ? CVDisplayLinkStop(displayLink) : CVDisplayLinkStart(displayLink);
+    if (result != kCVReturnSuccess) {
+        fprintf(stderr, "OpenSwiftUI: CVDisplayLink%s failed (%d)\n", paused ? "Stop" : "Start", (int)result);
+    }
+}
+#define CVDisplayLinkSetPaused openswiftui_display_link_set_paused
+#else
 extern void CVDisplayLinkSetPaused(CVDisplayLinkRef displayLink, bool paused);
+#endif
 static void remove_link(DisplayLinkRef displayLink);
 
 typedef struct DisplayLinkManager {

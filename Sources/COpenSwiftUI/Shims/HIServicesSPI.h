@@ -28,6 +28,8 @@ typedef CF_ENUM(int32_t, AXClientType) {
 
 OPENSWIFTUI_EXTERN_C_BEGIN
 
+#if !OPENSWIFTUI_NO_HISERVICES_AX_SPI
+
 AXClientType _AXGetClientForCurrentRequestUntrusted(void);
 void _AXSetClientIdentificationOverride(AXClientType clientType);
 
@@ -36,6 +38,8 @@ bool AXIsClientMakingRequest(void);
 
 OPENSWIFTUI_EXPORT
 void AXOverrideIsClientMakingRequest(bool value);
+
+#endif /* !OPENSWIFTUI_NO_HISERVICES_AX_SPI */
 
 OPENSWIFTUI_EXTERN_C_END
 
