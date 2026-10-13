@@ -11,8 +11,10 @@
 #import <objc/runtime.h>
 
 @implementation CALayer (OpenSwiftUI_SPI)
+#if !OPENSWIFTUI_NO_CACONTENTSSWIZZLE
 @dynamic contentsSwizzle;
 @dynamic contentsMultiplyColor;
+#endif
 @dynamic contentsScaling;
 @dynamic wantsExtendedDynamicRangeContent;
 @dynamic contentsMaximumDesiredEDR;
@@ -84,8 +86,10 @@
 
 @end
 
+#if !OPENSWIFTUI_NO_CACONTENTSSWIZZLE
 void _CALayerSetSplatsContentsAlpha(CALayer * _Nonnull layer, BOOL splatAlpha) {
     layer.contentsSwizzle = splatAlpha ? kCALayerContentsSwizzleAAAA : kCALayerContentsSwizzleRGBA;
 }
+#endif
 
 #endif /* <QuartzCore/CALayer.h> */

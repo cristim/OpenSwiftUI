@@ -58,7 +58,11 @@ final package class ImageLayer: CALayer {
             layerContents = nil
             bgColor = nil
         }
+        #if OPENSWIFTUI_NO_CACONTENTSSWIZZLE
+        contents = Self.tinted(layerContents, with: image.maskColor)
+        #else
         contents = layerContents
+        #endif
         backgroundColor = bgColor
         allowsEdgeAntialiasing = image.isAntialiased
         guard contents != nil else { return }
@@ -66,6 +70,7 @@ final package class ImageLayer: CALayer {
         contentsScale = image.scale
 
         // Configure swizzle and tint for template images
+        #if !OPENSWIFTUI_NO_CACONTENTSSWIZZLE
         if let maskColor = image.maskColor {
             _CALayerSetSplatsContentsAlpha(self, true)
             contentsMultiplyColor = maskColor.cgColor
@@ -73,6 +78,7 @@ final package class ImageLayer: CALayer {
             _CALayerSetSplatsContentsAlpha(self, false)
             contentsMultiplyColor = nil
         }
+        #endif
 
         // Configure resizing behavior
         let (centerRect, isTiled) = image.layerStretchInPixels(size: size)
@@ -122,6 +128,47 @@ final package class ImageLayer: CALayer {
             addEDRSpringAnimation(delta: edrDelta)
         }
     }
+
+    #if OPENSWIFTUI_NO_CACONTENTSSWIZZLE
+    /// Bakes the template tint into the bitmap: color times the image alpha.
+    /// Replaces the private contentsSwizzle (AAAA) plus contentsMultiplyColor pair.
+    private static func tinted(_ contents: Any?, with color: Color.Resolved?) -> Any? {
+        guard let color else {
+            return contents
+        }
+        guard let contents else {
+            return nil
+        }
+        guard let image = contents as? CGImage else {
+            _darlingCapabilityAbsent("contentsSwizzle", affectsValue: true)
+            return contents
+        }
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(
+                data: nil,
+                width: image.width,
+                height: image.height,
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              )
+        else {
+            _darlingCapabilityAbsent("contentsSwizzle", affectsValue: true)
+            return contents
+        }
+        let rect = CGRect(x: 0, y: 0, width: image.width, height: image.height)
+        context.draw(image, in: rect)
+        context.setBlendMode(.sourceIn)
+        context.setFillColor(color.cgColor)
+        context.fill(rect)
+        guard let result = context.makeImage() else {
+            _darlingCapabilityAbsent("contentsSwizzle", affectsValue: true)
+            return contents
+        }
+        return result
+    }
+    #endif
 
     @inline(__always)
     private func addEDRSpringAnimation(delta: CGFloat) {
@@ -213,6 +260,12 @@ final package class ImageLayer: CALayer {
             from: oldImage.scale,
             to: newImage.scale
         )
+        #if OPENSWIFTUI_NO_CACONTENTSSWIZZLE
+        // The tint is baked into the contents, so a color change needs a full update.
+        guard oldImage.maskColor == newImage.maskColor else {
+            return false
+        }
+        #else
         if let newMaskColor = newImage.maskColor {
             layer.update(
                 DisplayList.ViewUpdater.ContentsMultiplyColor.self,
@@ -220,6 +273,7 @@ final package class ImageLayer: CALayer {
                 to: newMaskColor
             )
         }
+        #endif
         return true
     }
 }

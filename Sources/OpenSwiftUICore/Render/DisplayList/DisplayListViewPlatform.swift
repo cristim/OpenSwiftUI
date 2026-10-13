@@ -1048,7 +1048,9 @@ extension DisplayList.ViewUpdater.Platform {
             var filters = state.pointee.filters
             if viewInfo.state.kind == .drawing {
                 let color = filters.popColorMultiply(drawable: viewInfo.view as? PlatformDrawable)
+                #if !OPENSWIFTUI_NO_CACONTENTSSWIZZLE
                 viewInfo.layer.contentsMultiplyColor = color?.cgColor
+                #endif
             }
             CoreViewSetFilters(
                 system: viewSystem,
@@ -2110,6 +2112,10 @@ extension [GraphicsFilter] {
     fileprivate mutating func popColorMultiply(
         drawable: @autoclosure () -> PlatformDrawable?
     ) -> Color.Resolved? {
+        #if OPENSWIFTUI_NO_CACONTENTSSWIZZLE
+        // contentsMultiplyColor is private: leave colorMultiply in the filter list.
+        return nil
+        #else
         guard case let .colorMultiply(color) = last,
               let drawable = drawable(),
               type(of: drawable).allowsContentsMultiplyColor
@@ -2118,6 +2124,7 @@ extension [GraphicsFilter] {
         }
         removeLast()
         return color
+        #endif
     }
 }
 
