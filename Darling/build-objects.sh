@@ -35,7 +35,7 @@ for t in OpenSwiftUICore OpenSwiftUI; do
         exit 1
     fi
     mapfile -t ARGS < "$OUT/$t.args"
-    ARGS+=(-D OPENSWIFTUI_NO_MORPHOLOGY -D OPENSWIFTUI_NO_COMBINE_LATEST4 -D OPENSWIFTUI_NO_CORETEXT_SPI)
+    ARGS+=(-D OPENSWIFTUI_NO_MORPHOLOGY -D OPENSWIFTUI_NO_COMBINE_LATEST4 -D OPENSWIFTUI_NO_CORETEXT_SPI -Xcc -DOPENSWIFTUI_NO_CORETEXT_SPI=1)
     flock -w 3600 "$HEAVY_BUILD_LOCK" nice -n 10 \
         "$TC/swiftc" "${ARGS[@]}"
     echo "== $t rc=$?"
