@@ -86,7 +86,7 @@ final package class ImageLayer: CALayer {
         #if OPENSWIFTUI_NO_CACONTENTSSCALING
         // Stretch is the default; the public API has no tiling, so tiled images render stretched.
         if isTiled {
-            _darlingCapabilityAbsent("contentsScalingRepeat", affectsValue: true)
+            _darlingCapabilityAbsent("contentsScalingRepeat")
         }
         #else
         contentsScaling = isTiled ? .repeat : .stretch
@@ -164,7 +164,7 @@ final package class ImageLayer: CALayer {
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
               )
         else {
-            _darlingCapabilityAbsent("contentsSwizzle", affectsValue: true)
+            _darlingCapabilityAbsent("contentsSwizzle")
             return contents
         }
         let rect = CGRect(x: 0, y: 0, width: image.width, height: image.height)
@@ -173,7 +173,7 @@ final package class ImageLayer: CALayer {
         context.setFillColor(color.cgColor)
         context.fill(rect)
         guard let result = context.makeImage() else {
-            _darlingCapabilityAbsent("contentsSwizzle", affectsValue: true)
+            _darlingCapabilityAbsent("contentsSwizzle")
             return contents
         }
         return result
