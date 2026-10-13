@@ -7,7 +7,7 @@
 
 #include "OpenSwiftUIBase.h"
 
-#if __has_include(<QuartzCore/QuartzCore.h>)
+#if __has_include(<QuartzCore/QuartzCore.h>) && OPENSWIFTUI_TARGET_OS_IPHONE
 
 #import <QuartzCore/QuartzCore.h>
 #import "Shims/QuartzCore/QuartzCore_Private.h"
@@ -19,7 +19,7 @@ CATransactionCompletionItem * _Nullable _CATransactionCompletionItem(void);
 
 OPENSWIFTUI_ASSUME_NONNULL_END
 
-#endif /* __has_include(<QuartzCore/QuartzCore.h>) */
+#endif /* __has_include(<QuartzCore/QuartzCore.h>) && OPENSWIFTUI_TARGET_OS_IPHONE */
 
 #endif /* CATransactionCompletionItem_h */
 

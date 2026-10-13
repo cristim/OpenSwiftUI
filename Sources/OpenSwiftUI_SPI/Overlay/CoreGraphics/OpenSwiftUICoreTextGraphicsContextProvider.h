@@ -10,7 +10,7 @@
 
 #include "OpenSwiftUIBase.h"
 
-#if OPENSWIFTUI_TARGET_OS_DARWIN
+#if OPENSWIFTUI_TARGET_OS_DARWIN && !OPENSWIFTUI_TARGET_OS_OSX
 
 @import UIFoundation_Private;
 
