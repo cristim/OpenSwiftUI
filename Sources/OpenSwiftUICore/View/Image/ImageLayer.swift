@@ -83,7 +83,14 @@ final package class ImageLayer: CALayer {
         // Configure resizing behavior
         let (centerRect, isTiled) = image.layerStretchInPixels(size: size)
         contentsCenter = centerRect
+        #if OPENSWIFTUI_NO_CACONTENTSSCALING
+        // Stretch is the default; the public API has no tiling, so tiled images render stretched.
+        if isTiled {
+            _darlingCapabilityAbsent("contentsScalingRepeat", affectsValue: true)
+        }
+        #else
         contentsScaling = isTiled ? .repeat : .stretch
+        #endif
 
         // Configure interpolation filters
         switch image.interpolation {
