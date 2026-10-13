@@ -397,7 +397,7 @@ extension DisplayList.ViewUpdater.Platform {
                 if viewInfo.state.kind != .backdrop {
                     viewInfo = _makeItemView(item: item, state: state)
                 }
-                #if canImport(QuartzCore)
+                #if canImport(QuartzCore) && !OPENSWIFTUI_NO_CABACKDROPLAYER
                 let layer = viewInfo.layer as! CABackdropLayer
                 let hasZeroScale = effect.scale == 0
                 layer.scale = hasZeroScale ? 1.0 : CGFloat(effect.scale)
@@ -405,6 +405,10 @@ extension DisplayList.ViewUpdater.Platform {
                 layer.backgroundColor = effect.color.cgColor
                 let groupID = state.pointee.backdropGroupID
                 layer.groupName = groupID == 0 ? nil : "OpenSwiftUI-\(groupID)"
+                #elseif canImport(QuartzCore)
+                // No backdrop blur without CABackdropLayer: a flat tint of the effect color.
+                viewInfo.layer.backgroundColor = effect.color.cgColor
+                _darlingCapabilityAbsent("CABackdropLayer")
                 #else
                 _openSwiftUIPlatformUnimplementedWarning()
                 #endif
@@ -1176,8 +1180,10 @@ extension DisplayList.ViewUpdater.Platform {
         case let .content(content):
             switch content.value {
             case .backdrop:
-                #if canImport(QuartzCore)
+                #if canImport(QuartzCore) && !OPENSWIFTUI_NO_CABACKDROPLAYER
                 let view = definition.makeLayerView(type: CABackdropLayer.self, kind: .backdrop)
+                #elseif canImport(QuartzCore)
+                let view = definition.makeLayerView(type: CALayer.self, kind: .backdrop)
                 #else
                 let view = definition.makeLayerView(type: CALayer.self, kind: .backdrop)
                 _openSwiftUIPlatformUnimplementedWarning()

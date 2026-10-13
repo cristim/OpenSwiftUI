@@ -27,8 +27,14 @@ final class NSViewPlatformViewDefinition: PlatformViewDefinition, @unchecked Sen
     override static func makeView(kind: PlatformViewDefinition.ViewKind) -> AnyObject {
         let view: NSView
         switch kind {
+        #if !OPENSWIFTUI_NO_CACHAMELEONLAYER
         case .chameleonColor:
             return makeLayerView(type: CAChameleonLayer.self, kind: kind)
+        #else
+        case .chameleonColor:
+            _darlingCapabilityAbsent("CAChameleonLayer")
+            view = _NSGraphicsView()
+        #endif
         case .projection:
             view = _NSProjectionView()
         case .mask:
