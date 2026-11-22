@@ -7,6 +7,7 @@
 //  ID: EFAEDE41CB8C85EF3A6A18DC05438A3C
 
 package import Foundation
+import CoreGraphics
 
 extension DisplayList {
     final package class GraphicsRenderer {

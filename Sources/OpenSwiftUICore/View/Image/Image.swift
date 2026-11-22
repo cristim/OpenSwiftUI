@@ -11,6 +11,7 @@ package import OpenCoreGraphicsShims
 package import OpenRenderBoxShims
 #if OPENSWIFTUI_LINK_COREUI
 package import CoreUI
+import CoreGraphics
 #endif
 
 // MARK: - Image

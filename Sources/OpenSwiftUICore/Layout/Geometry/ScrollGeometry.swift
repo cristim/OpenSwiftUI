@@ -6,6 +6,7 @@
 //  Status: Complete
 
 public import Foundation
+import CoreGraphics
 
 /// A type that defines the geometry of a scroll view.
 ///

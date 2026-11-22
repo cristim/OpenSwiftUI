@@ -7,6 +7,7 @@
 
 package import Foundation
 package import OpenAttributeGraphShims
+import CoreGraphics
 
 /// A type that represents the position and dimensions of a view in its parent's coordinate space.
 ///

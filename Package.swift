@@ -607,6 +607,18 @@ let openSwiftUIMacrosTestTarget = Target.testTarget(
     swiftSettings: sharedSwiftSettings
 )
 
+// MARK: - OpenSwiftUICompatibility Target
+
+// The platform this package builds against does not provide everything Apple's Foundation
+// and Core Graphics do. Those gaps are filled here rather than in the module that happens
+// to need them, so that a fill has one home, is reviewable on its own, and disappears when
+// the platform catches up.
+let openSwiftUICompatibilityTarget = Target.target(
+    name: "OpenSwiftUICompatibility",
+    dependencies: [],
+    swiftSettings: sharedSwiftSettings
+)
+
 // MARK: - OpenSwiftUICore Target
 
 // NOTE:
@@ -615,6 +627,7 @@ let openSwiftUIMacrosTestTarget = Target.testTarget(
 let openSwiftUICoreTarget = Target.target(
     name: "OpenSwiftUICore",
     dependencies: [
+        "OpenSwiftUICompatibility",
         "OpenSwiftUI_SPI",
         "OpenSwiftUIMacros",
         .product(name: "OpenCoreGraphicsShims", package: "OpenCoreGraphics"),
@@ -829,6 +842,7 @@ let package = Package(
     targets: [
         openSwiftUISPITarget,
         openSwiftUIMacrosTarget,
+        openSwiftUICompatibilityTarget,
         openSwiftUICoreTarget,
         cOpenSwiftUITarget,
         openSwiftUITarget,

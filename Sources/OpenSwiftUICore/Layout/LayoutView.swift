@@ -7,6 +7,7 @@
 
 package import Foundation
 package import OpenAttributeGraphShims
+import CoreGraphics
 
 // MARK: - UnaryLayout [6.4.41]
 

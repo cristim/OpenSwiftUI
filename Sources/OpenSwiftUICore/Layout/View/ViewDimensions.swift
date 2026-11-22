@@ -6,6 +6,7 @@
 //  Status: Complete
 
 public import Foundation
+import CoreGraphics
 
 /// A view's size and alignment guides in its own coordinate space.
 ///

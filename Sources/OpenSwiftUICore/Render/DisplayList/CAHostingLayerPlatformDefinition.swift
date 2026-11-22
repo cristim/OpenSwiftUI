@@ -11,6 +11,7 @@ import OpenSwiftUI_SPI
 import QuartzCore
 import QuartzCore_Private
 import OpenRenderBoxShims
+import CoreGraphics
 
 // MARK: - CAHostingLayerPlatformDefinition
 

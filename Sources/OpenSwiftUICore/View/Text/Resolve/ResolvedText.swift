@@ -10,6 +10,7 @@ package import Foundation
 package import UIFoundation_Private
 #if canImport(CoreText)
 import CoreText
+import CoreGraphics
 #endif
 
 // MARK: - ResolvedTextContainer

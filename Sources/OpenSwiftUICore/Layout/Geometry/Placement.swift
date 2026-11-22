@@ -5,6 +5,7 @@
 //  Status: Complete
 
 public import Foundation
+import CoreGraphics
 
 // MARK: - Placement [6.4.41]
 

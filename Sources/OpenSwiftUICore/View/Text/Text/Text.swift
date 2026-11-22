@@ -7,6 +7,7 @@
 //  ID: 7800CE2E251A218329C9998E1C3194FD (SwiftUICore)
 
 public import Foundation
+import CoreGraphics
 
 // MARK: - Text
 

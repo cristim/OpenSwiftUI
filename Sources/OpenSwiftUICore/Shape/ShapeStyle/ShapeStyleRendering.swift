@@ -8,6 +8,7 @@
 
 package import OpenAttributeGraphShims
 package import OpenCoreGraphicsShims
+import CoreGraphics
 
 extension ShapeStyle {
     package typealias RenderedShape = _ShapeStyle_RenderedShape

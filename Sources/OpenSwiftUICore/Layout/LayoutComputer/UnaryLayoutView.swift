@@ -8,6 +8,7 @@
 
 import Foundation
 package import OpenAttributeGraphShims
+import CoreGraphics
 
 // MARK: - UnaryLayout + _PositionAwarePlacementContext
 

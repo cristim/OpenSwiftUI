@@ -9,6 +9,7 @@
 
 package import Foundation
 package import OpenAttributeGraphShims
+import CoreGraphics
 
 // MARK: - CachedEnvironment
 

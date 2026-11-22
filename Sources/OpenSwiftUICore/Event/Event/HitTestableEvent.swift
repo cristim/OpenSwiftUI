@@ -6,6 +6,7 @@
 //  Status: Complete
 
 package import Foundation
+import CoreGraphics
 
 // MARK: - HitTestableEventType
 

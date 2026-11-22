@@ -6,6 +6,7 @@
 
 package import Foundation
 package import OpenAttributeGraphShims
+import CoreGraphics
 
 // MARK: - _ContentShapeModifier
 

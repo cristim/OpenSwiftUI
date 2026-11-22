@@ -7,6 +7,7 @@
 
 public import Foundation
 public import OpenQuartzCoreShims
+import CoreGraphics
 
 @frozen
 public struct ProjectionTransform {

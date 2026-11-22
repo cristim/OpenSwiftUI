@@ -7,6 +7,7 @@
 
 import OpenAttributeGraphShims
 package import OpenCoreGraphicsShims
+import CoreGraphics
 
 /// A UnaryLayout which insets its child by the inverse of the safe area
 /// on the specified edges.

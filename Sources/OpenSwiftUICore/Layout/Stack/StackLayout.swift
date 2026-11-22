@@ -7,6 +7,7 @@
 //  ID: 00690F480F8D293143B214DBE6D72CD0 (SwiftUICore)
 
 import Foundation
+import CoreGraphics
 
 /// A layout that arranges subviews in a linear sequence along a major axis.
 ///

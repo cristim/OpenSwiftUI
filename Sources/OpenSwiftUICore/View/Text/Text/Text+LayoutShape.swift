@@ -7,6 +7,7 @@
 //  ID: 0B075DB77A31A3DA949C6F4F810CBA16 (SwiftUICore)
 
 package import Foundation
+import CoreGraphics
 
 package struct TextShape: Equatable {
     private enum Exclusion: Equatable {

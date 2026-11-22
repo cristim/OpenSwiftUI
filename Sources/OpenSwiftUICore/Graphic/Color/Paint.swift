@@ -6,6 +6,7 @@
 //  Status: Blocked by Gradient, Image and Shader
 
 package import Foundation
+import CoreGraphics
 
 // MARK: - ResolvedPaint
 

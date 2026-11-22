@@ -10,6 +10,7 @@ import Foundation
 import OpenQuartzCoreShims
 import OpenSwiftUI_SPI
 import UIFoundation_Private
+import CoreGraphics
 // import OpenRenderBoxShims
 
 // MARK: - ShapeLayerHelper [WIP]
@@ -49,11 +50,35 @@ struct ShapeLayerHelper: ResolvedPaintVisitor {
         }
 
         #if canImport(QuartzCore)
-        let color = Self.requireLayerFill(for: paint)
         layer.contentsScale = contentsScale
+        // A shape layer fills its path with a gradient, but only along a straight
+        // axis; every other paint still needs the single fill colour.
+        let gradient = Self.layerGradient(for: paint, in: paintBounds)
+        let color = gradient == nil ? Self.requireLayerFill(for: paint) : nil
         switch shapeType {
-        case let .rect(_, radius, cornerStyle):
-            layer.backgroundColor = color.cgColor
+        case let .rect(rect, radius, cornerStyle):
+            if let gradient {
+                guard let shapeLayer = layer as? CAShapeLayer else { return }
+                // A plain layer can only be filled with one colour, so a gradient
+                // rect is drawn as its own path and the corner radius becomes part
+                // of the path rather than a layer property.
+                shapeLayer.path = CGPathCreateWithRoundedRect(
+                    rect,
+                    radius,
+                    radius,
+                    nil
+                )
+                shapeLayer.fillRule = .nonZero
+                shapeLayer.strokeColor = nil
+                shapeLayer.lineWidth = 0
+                shapeLayer.backgroundColor = nil
+                shapeLayer.fillColor = nil
+                shapeLayer.gradient = gradient.cgGradient
+                shapeLayer.startPoint = gradient.geometry.startPoint
+                shapeLayer.endPoint = gradient.geometry.endPoint
+                return
+            }
+            layer.backgroundColor = color?.cgColor
             layer.borderColor = nil
             layer.borderWidth = 0
             layer.cornerRadius = radius
@@ -101,7 +126,17 @@ struct ShapeLayerHelper: ResolvedPaintVisitor {
                 CGAffineTransform(translationX: -origin.x, y: -origin.y)
             )
             shapeLayer.path = path.cgPath
-            shapeLayer.fillColor = color.cgColor
+            if let gradient {
+                // The gradient is the fill, so a colour left on a recycled layer
+                // would have to be cleared or it would be ignored.
+                shapeLayer.fillColor = nil
+                shapeLayer.gradient = gradient.cgGradient
+                shapeLayer.startPoint = gradient.geometry.startPoint
+                shapeLayer.endPoint = gradient.geometry.endPoint
+            } else {
+                shapeLayer.gradient = nil
+                shapeLayer.fillColor = color?.cgColor
+            }
             shapeLayer.fillRule = style.isEOFilled ? .evenOdd : .nonZero
             shapeLayer.strokeColor = nil
             shapeLayer.lineDashPattern = nil
@@ -140,6 +175,46 @@ struct ShapeLayerHelper: ResolvedPaintVisitor {
             ?? (paint as? AnchoredResolvedPaint<Color.Resolved>)?.paint
     }
 
+    /// The gradient a shape layer can be filled with, or nil when the paint is not
+    /// one it can express.
+    ///
+    /// A gradient reaches the layer as stops and a straight axis, which is what
+    /// `CAShapeLayer` draws. A radial gradient has no equivalent there, so it is
+    /// not claimed here and keeps being routed to a drawing group instead of being
+    /// flattened into one of its stops.
+    static func layerGradient<P>(
+        for paint: P,
+        in bounds: CGRect
+    ) -> (cgGradient: CGGradient, geometry: ResolvedGradient.Geometry)? where P: ResolvedPaint {
+        #if canImport(QuartzCore)
+        guard let gradientPaint = paint as? GradientPaint else { return nil }
+        let geometry = gradientPaint.gradient.resolved(in: bounds)
+        guard geometry.kind == .linear,
+              let cgGradient = GradientPaint.makeCGGradient(from: geometry)
+        else {
+            return nil
+        }
+        return (cgGradient, geometry)
+        #else
+        _ = bounds
+        return nil
+        #endif
+    }
+
+    /// Whether a shape layer can take this paint, so the display list does not send
+    /// it to a drawing group first.
+    ///
+    /// This is deliberately about shapes rather than about layers in general: a
+    /// gradient goes onto a shape's path, but it cannot be a layer's background
+    /// colour, so the same paint behind an arbitrary view is still not something
+    /// the layer tree can express.
+    static func canExpressPaintOnShapeLayer(_ paint: any ResolvedPaint) -> Bool {
+        if paint is Color.Resolved || paint is GradientPaint {
+            return true
+        }
+        return (paint as? AnchoredResolvedPaint<Color.Resolved>)?.paint is Color.Resolved
+    }
+
     /// The colour to fill a layer with, stopping when the paint is not one it can
     /// express.
     ///
@@ -164,7 +239,13 @@ struct ShapeLayerHelper: ResolvedPaintVisitor {
         let isColor = paint is Color.Resolved
             || paint is AnchoredResolvedPaint<Color.Resolved>
         guard isColor else {
+            // A gradient is filled through the path, which only a shape layer has,
+            // so it asks for one instead of the plain layer a colour can use.
+            #if canImport(QuartzCore)
+            return paint is GradientPaint ? CAShapeLayer.self : CALayer.self
+            #else
             return CALayer.self
+            #endif
         }
         switch shapeType {
         case .rect, .rectBorder, .empty:

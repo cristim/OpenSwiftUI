@@ -6,6 +6,7 @@
 //  Status: Complete
 
 public import Foundation
+import CoreGraphics
 
 @available(OpenSwiftUI_v1_0, *)
 extension Animation {

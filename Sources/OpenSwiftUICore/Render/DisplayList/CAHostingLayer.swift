@@ -8,6 +8,7 @@
 
 #if canImport(QuartzCore)
 public import Foundation
+import CoreGraphics
 @_spiOnly public import QuartzCore
 
 // MARK: - CAHostingLayer

@@ -11,6 +11,7 @@ import OpenSwiftUI_SPI
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+import CoreGraphics
 #endif
 
 // MARK: - DisplayList + stdout rendering

@@ -7,6 +7,7 @@
 //  ID: 25E61DBD3DDB4AD4C9A82B4C3137A7B6 (SwiftUICore)
 
 import Foundation
+import CoreGraphics
 
 // MARK: - EffectAnimation
 

@@ -9,6 +9,7 @@
 
 package import Foundation
 package import OpenCoreGraphicsShims
+import CoreGraphics
 
 // MARK: - ViewTransform
 

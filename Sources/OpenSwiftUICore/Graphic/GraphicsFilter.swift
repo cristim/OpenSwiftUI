@@ -7,6 +7,7 @@
 
 package import OpenCoreGraphicsShims
 import OpenQuartzCoreShims
+import CoreGraphics
 
 package enum GraphicsFilter {
     case blur(BlurStyle)

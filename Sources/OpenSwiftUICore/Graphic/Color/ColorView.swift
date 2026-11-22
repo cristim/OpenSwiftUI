@@ -6,6 +6,7 @@
 //  Status: Complete
 
 package import Foundation
+import CoreGraphics
 
 package struct ColorView: RendererLeafView, Animatable {
     package var color: Color.Resolved

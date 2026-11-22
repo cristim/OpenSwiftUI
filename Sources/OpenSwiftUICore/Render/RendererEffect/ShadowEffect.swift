@@ -6,6 +6,7 @@
 //  Status: Complete
 
 public import Foundation
+import CoreGraphics
 
 // MARK: - _ShadowEffect
 

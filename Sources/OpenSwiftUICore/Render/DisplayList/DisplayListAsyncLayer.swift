@@ -8,6 +8,7 @@
 import Foundation
 import OpenQuartzCoreShims
 import UIFoundation_Private
+import CoreGraphics
 
 protocol _DisplayList_ViewUpdater_AsyncLayerProperty {
     associatedtype Value

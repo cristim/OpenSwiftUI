@@ -7,6 +7,7 @@
 //  ID: 10D838C6E672964CE3DB0EADFD20CA25 (SwiftUICore)
 
 public import Foundation
+import CoreGraphics
 
 /// A variant of a symbol.
 ///

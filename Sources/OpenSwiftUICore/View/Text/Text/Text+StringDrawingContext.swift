@@ -10,6 +10,7 @@ public import Foundation
 import OpenSwiftUI_SPI
 #if canImport(UIFoundation_Private)
 import UIFoundation_Private
+import CoreGraphics
 #endif
 
 @available(OpenSwiftUI_v6_0, *)

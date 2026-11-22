@@ -6,6 +6,7 @@
 //  Status: Complete
 
 import OpenCoreGraphicsShims
+import CoreGraphics
 
 @available(OpenSwiftUI_v1_0, *)
 extension AnyTransition {

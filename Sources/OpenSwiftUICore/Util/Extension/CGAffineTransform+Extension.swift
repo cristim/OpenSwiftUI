@@ -7,6 +7,7 @@
 
 package import OpenCoreGraphicsShims
 package import Foundation
+import CoreGraphics
 
 extension CGAffineTransform {
     package init(rotation: Angle) {

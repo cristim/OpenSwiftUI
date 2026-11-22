@@ -6,6 +6,7 @@
 //  Status: Complete
 //  ID: 8AD2EA4DF9F96B2E7AB78754CF15EB14 (SwiftUICore)
 
+public import CoreGraphics
 public import OpenCoreGraphicsShims
 
 private let leastNonzeroScaleFactor = (2 * CGFloat.leastNormalMagnitude).squareRoot()

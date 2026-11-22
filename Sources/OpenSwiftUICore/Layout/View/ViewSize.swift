@@ -7,6 +7,7 @@
 
 package import Foundation
 package import OpenAttributeGraphShims
+import CoreGraphics
 
 /// A structure that represents the size of a view and its associated size proposal.
 ///

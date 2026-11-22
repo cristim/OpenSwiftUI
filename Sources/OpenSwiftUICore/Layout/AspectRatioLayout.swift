@@ -6,6 +6,7 @@
 //  ID: 16C39F04401F65ECECDD878223AA3E56
 
 public import Foundation
+import CoreGraphics
 
 // MARK: - ContentMode [6.4.41]
 

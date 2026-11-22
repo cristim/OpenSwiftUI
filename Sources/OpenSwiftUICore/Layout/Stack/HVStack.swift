@@ -6,6 +6,7 @@
 //  Status: Complete
 
 package import Foundation
+import CoreGraphics
 
 package protocol HVStack: Layout, _VariadicView_UnaryViewRoot where Cache == _StackLayoutCache {
     associatedtype MinorAxisAlignment: AlignmentGuide

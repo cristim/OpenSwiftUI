@@ -8,6 +8,7 @@
 
 import Foundation
 import OpenAttributeGraphShims
+import CoreGraphics
 
 @available(OpenSwiftUI_v3_0, *)
 extension EnvironmentValues {

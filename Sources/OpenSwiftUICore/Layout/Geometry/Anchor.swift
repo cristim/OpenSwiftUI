@@ -8,6 +8,7 @@
 
 package import OpenAttributeGraphShims
 package import OpenCoreGraphicsShims
+import CoreGraphics
 
 // MARK: - AnchorGeometry
 

@@ -10,6 +10,7 @@ package import Foundation
 package import OpenAttributeGraphShims
 package import OpenCoreGraphicsShims
 package import OpenRenderBoxShims
+import CoreGraphics
 
 // MARK: - _DisplayList_Identity
 

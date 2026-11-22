@@ -5,6 +5,7 @@
 //  Status: Complete
 
 package import Foundation
+import CoreGraphics
 
 // MARK: - View + layoutPriority [6.4.41]
 

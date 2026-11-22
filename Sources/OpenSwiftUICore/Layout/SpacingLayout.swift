@@ -6,6 +6,7 @@
 //  Status: Complete
 
 import OpenCoreGraphicsShims
+import CoreGraphics
 
 struct SpacingLayout: UnaryLayout {
     var spacing: Spacing

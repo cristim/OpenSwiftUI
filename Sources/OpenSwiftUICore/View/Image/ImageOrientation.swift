@@ -6,6 +6,7 @@
 //  Status: Complete
 
 package import OpenCoreGraphicsShims
+import CoreGraphics
 
 // MARK: - Image.Orientation
 

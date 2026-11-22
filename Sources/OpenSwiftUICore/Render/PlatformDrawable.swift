@@ -17,6 +17,7 @@ import QuartzCore_Private
 import AppKit
 #endif
 import OpenSwiftUI_SPI
+import CoreGraphics
 
 // MARK: - PlatformDrawable
 

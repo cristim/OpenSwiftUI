@@ -16,6 +16,7 @@ public import SFSymbols
 public import Symbols
 #endif
 package import OpenRenderBoxShims
+import CoreGraphics
 
 // MARK: - ContentTransition [WIP]
 

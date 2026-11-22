@@ -8,6 +8,7 @@
 
 package import Foundation
 package import OpenAttributeGraphShims
+import CoreGraphics
 
 package struct LayoutComputer: Equatable {
     fileprivate var box: AnyLayoutEngineBox

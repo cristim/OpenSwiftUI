@@ -9,6 +9,7 @@
 package import Foundation
 #endif
 package import OpenAttributeGraphShims
+import CoreGraphics
 
 // MARK: - ViewInputs [6.0.87]
 

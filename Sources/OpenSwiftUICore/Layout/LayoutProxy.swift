@@ -7,6 +7,7 @@
 
 package import Foundation
 package import OpenAttributeGraphShims
+import CoreGraphics
 
 /// A collection of attributes that can be applied to layout calculations.
 ///

@@ -6,6 +6,7 @@
 //  Status: Complete
 
 package import Foundation
+import CoreGraphics
 
 package struct UnitRect: Hashable {
     package var x: CGFloat

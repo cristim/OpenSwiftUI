@@ -6,6 +6,7 @@
 //  Status: Blocked by HoverEffectContent and VisualEffect
 
 public import OpenCoreGraphicsShims
+import CoreGraphics
 
 // MARK: - ClipEffect
 

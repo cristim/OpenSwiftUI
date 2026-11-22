@@ -7,6 +7,7 @@
 
 public import OpenCoreGraphicsShims
 package import OpenRenderBoxShims
+import CoreGraphics
 
 #if !canImport(CoreGraphics)
 public enum CGBlendMode: Int32, @unchecked Sendable {

@@ -6,6 +6,7 @@
 //  Status: Empty
 
 package import OpenCoreGraphicsShims
+import CoreGraphics
 // package import OpenRenderBoxShims
 
 // MARK: - Shader [TODO]

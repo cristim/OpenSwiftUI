@@ -7,6 +7,7 @@
 //  ID: CA3A65C294B7CEBAC4D3EE28C528C257 (SwiftUICore)
 
 import OpenCoreGraphicsShims
+import CoreGraphics
 
 // MARK: - DisplayList.ViewUpdater.Model
 

@@ -7,6 +7,7 @@
 //  ID: 1135C055CD2C2B1265C25B13E3E74C01 (SwiftUICore)
 
 public import Foundation
+import CoreGraphics
 
 // MARK: - AlignmentID [6.4.41]
 

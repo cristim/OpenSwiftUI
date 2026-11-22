@@ -9,6 +9,7 @@
 package import Foundation
 package import OpenAttributeGraphShims
 package import OpenCoreGraphicsShims
+import CoreGraphics
 
 // MARK: - ShapeStyledLeafView
 

@@ -15,6 +15,7 @@ package import CoreSVG
 #endif
 @_spiOnly public import OpenRenderBoxShims
 public import OpenCoreGraphicsShims
+import CoreGraphics
 
 // MARK: - VectorImageLayer
 

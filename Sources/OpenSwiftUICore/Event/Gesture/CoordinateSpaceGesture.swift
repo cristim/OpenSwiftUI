@@ -8,6 +8,7 @@
 
 import Foundation
 import OpenAttributeGraphShims
+import CoreGraphics
 
 // MARK: - CoordinateSpaceGesture
 

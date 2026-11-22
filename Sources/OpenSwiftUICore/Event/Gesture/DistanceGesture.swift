@@ -7,6 +7,7 @@
 //  ID: AE77061B4A25E6848CE6B7A87EEE80F8 (SwiftUICore)
 
 package import Foundation
+import CoreGraphics
 
 // MARK: - DistanceGesture
 

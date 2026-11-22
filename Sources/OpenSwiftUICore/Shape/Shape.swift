@@ -7,6 +7,7 @@
 
 public import Foundation
 package import OpenCoreGraphicsShims
+import CoreGraphics
 
 // MARK: - Shape
 

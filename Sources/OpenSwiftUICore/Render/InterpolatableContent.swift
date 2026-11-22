@@ -8,6 +8,7 @@
 
 package import OpenAttributeGraphShims
 import OpenCoreGraphicsShims
+import CoreGraphics
 
 // MARK: - InterpolatableContent
 

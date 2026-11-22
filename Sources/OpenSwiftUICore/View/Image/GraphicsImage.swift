@@ -17,6 +17,7 @@ import CoreGraphics_Private
 
 #if OPENSWIFTUI_LINK_COREUI
 package import CoreUI
+import CoreGraphics
 #endif
 
 // MARK: - GraphicsImage

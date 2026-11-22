@@ -6,6 +6,7 @@
 //  Status: Complete
 
 public import OpenCoreGraphicsShims
+import CoreGraphics
 
 // MARK: - RotationEffect
 

@@ -6,6 +6,7 @@
 //  Status: Complete
 
 public import OpenQuartzCoreShims
+import CoreGraphics
 
 // MARK: - RotationEffect
 

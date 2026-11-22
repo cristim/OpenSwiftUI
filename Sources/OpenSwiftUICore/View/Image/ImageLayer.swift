@@ -9,6 +9,7 @@
 #if canImport(Darwin)
 package import QuartzCore
 import QuartzCore_Private
+import CoreGraphics
 
 // MARK: - ImageLayer
 

@@ -9,6 +9,7 @@
 import Foundation
 import OpenQuartzCoreShims
 import OpenSwiftUI_SPI
+import CoreGraphics
 
 #if canImport(QuartzCore)
 

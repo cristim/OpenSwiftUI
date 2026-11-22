@@ -11,6 +11,7 @@ public import Foundation
 package import OpenRenderBoxShims
 import OpenSwiftUI_SPI
 public import OpenCoreGraphicsShims
+import CoreGraphics
 
 // MARK: - Path [WIP]
 

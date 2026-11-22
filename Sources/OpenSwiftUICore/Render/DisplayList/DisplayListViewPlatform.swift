@@ -11,6 +11,7 @@ import Foundation
 import OpenSwiftUI_SPI
 #if canImport(QuartzCore)
 import QuartzCore_Private
+import CoreGraphics
 #endif
 
 // MARK: - PlatformViewDefinition

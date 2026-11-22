@@ -6,6 +6,7 @@
 //  Status: Complete
 
 package import Foundation
+import CoreGraphics
 
 /// A size proposal that can have specified or unspecified dimensions.
 ///

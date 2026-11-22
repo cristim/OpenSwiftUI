@@ -6,6 +6,7 @@
 //  Status: WIP
 
 public import Foundation
+import CoreGraphics
 
 // MARK: - InsettableShape
 

@@ -7,6 +7,7 @@
 //  ID: 950FC9541E969A331FB3CF1283EA4AEC (SwiftUICore)
 
 package import Foundation
+import CoreGraphics
 
 /// A description of the sizing behavior of a view.
 public struct _LayoutTraits: Equatable {

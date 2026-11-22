@@ -7,6 +7,7 @@
 //  ID: A5372118658F90C947BF499CB95E323D (SwiftUICore)
 
 public import Foundation
+import CoreGraphics
 
 /// Pads a view by the specified amount or the default amount.
 ///

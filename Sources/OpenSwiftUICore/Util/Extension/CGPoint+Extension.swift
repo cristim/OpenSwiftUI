@@ -6,6 +6,7 @@
 //  Status: Complete
 
 public import Foundation
+import CoreGraphics
 
 @_spi(ForOpenSwiftUIOnly)
 public typealias PlatformPoint = CGPoint

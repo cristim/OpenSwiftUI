@@ -12,6 +12,7 @@ public import CoreText
 @_spiOnly
 public import OpenAttributeGraphShims
 import OpenSwiftUI_SPI
+import CoreGraphics
 
 // MARK: - CoreGlue
 

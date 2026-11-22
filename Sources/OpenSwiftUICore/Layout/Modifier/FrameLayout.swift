@@ -6,6 +6,7 @@
 //  ID: 73C64038119BBD0A6D8557B14379A404 (SwiftUICore)
 
 public import Foundation
+import CoreGraphics
 
 // MARK: - FrameLayoutCommon [6.4.41]
 

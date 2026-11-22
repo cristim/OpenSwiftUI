@@ -7,6 +7,7 @@
 //  ID: D2D36AB6EC54BD879A165F3510222DD0 (SwiftUICore)
 
 public import Foundation
+import CoreGraphics
 
 // MARK: - AnyLayout
 

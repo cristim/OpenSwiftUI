@@ -7,6 +7,7 @@
 //  ID: 4FD7A1D5440B1394D12A74675615ED20 (SwiftUICore)
 
 public import Foundation
+import CoreGraphics
 
 /// The way a view changes over time to create a smooth visual transition from
 /// one state to another.

@@ -9,6 +9,7 @@ public import Foundation
 package import OpenCoreGraphicsShims
 import OpenSwiftUI_SPI
 package import OpenRenderBoxShims
+import CoreGraphics
 
 // MARK: - RoundedCornerStyle
 

@@ -10,6 +10,7 @@ package import OpenAttributeGraphShims
 package import OpenCoreGraphicsShims
 #if OPENSWIFTUI_LINK_COREUI
 package import CoreUI
+import CoreGraphics
 #endif
 
 extension Image {

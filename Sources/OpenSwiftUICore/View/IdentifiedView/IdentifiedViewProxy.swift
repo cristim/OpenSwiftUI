@@ -6,6 +6,7 @@
 
 public import Foundation
 import OpenAttributeGraphShims
+import CoreGraphics
 
 // MARK: - _IdentifiedViewProxy [6.4.41]
 

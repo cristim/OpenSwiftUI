@@ -5,6 +5,7 @@
 //  Status: Complete
 
 package import Foundation
+import CoreGraphics
 
 // MARK: - TestHost [6.4.41]
 

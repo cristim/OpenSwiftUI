@@ -7,6 +7,7 @@
 
 package import Foundation
 package import OpenAttributeGraphShims
+import CoreGraphics
 
 //extension Graph.NamedTraceEvent {
 //    package static let update: Graph.NamedTraceEvent

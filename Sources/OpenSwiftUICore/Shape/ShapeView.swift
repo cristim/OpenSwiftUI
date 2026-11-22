@@ -7,6 +7,7 @@
 
 public import Foundation
 package import OpenAttributeGraphShims
+import CoreGraphics
 
 // MARK: - Shape + Extension (disfavoredOverload)
 

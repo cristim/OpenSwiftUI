@@ -8,6 +8,7 @@
 
 package import OpenAttributeGraphShims
 public import OpenCoreGraphicsShims
+import CoreGraphics
 
 /// A type defining the target in which a scroll view should try and scroll to.
 @available(OpenSwiftUI_v5_0, *)

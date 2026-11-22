@@ -8,6 +8,7 @@
 
 public import OpenCoreGraphicsShims
 package import OpenSwiftUI_SPI
+import CoreGraphics
 
 @available(OpenSwiftUI_v1_0, *)
 extension Image {

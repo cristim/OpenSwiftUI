@@ -13,6 +13,7 @@ package import OpenRenderBoxShims
 import UIFoundation_Private
 #if canImport(CoreText)
 package import CoreText
+import CoreGraphics
 #endif
 
 // MARK: - Text + View [WIP]

@@ -8,6 +8,7 @@
 
 package import OpenCoreGraphicsShims
 import OpenAttributeGraphShims
+import CoreGraphics
 
 // MARK: - _OpacityEffect
 

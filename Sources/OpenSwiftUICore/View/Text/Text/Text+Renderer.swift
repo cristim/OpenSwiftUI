@@ -12,6 +12,7 @@ import CoreText
 import OpenAttributeGraphShims
 public import OpenCoreGraphicsShims
 import UIFoundation_Private
+import CoreGraphics
 
 // TODO: TextRenderer
 

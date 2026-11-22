@@ -6,6 +6,7 @@
 //  Status: Complete
 //  ID: 2095A85BBACBB369317EE0CF616E6EA7 (SwiftUICore)
 
+import CoreGraphics
 @_spiOnly public import OpenCoreGraphicsShims
 
 // MARK: - CAHostingLayerEvent

@@ -9,6 +9,7 @@
 package import Foundation
 package import OpenAttributeGraphShims
 import OpenSwiftUI_SPI
+import CoreGraphics
 
 // MARK: - GestureDebug
 

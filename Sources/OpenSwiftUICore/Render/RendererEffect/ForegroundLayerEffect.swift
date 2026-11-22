@@ -8,6 +8,7 @@
 
 package import Foundation
 import OpenAttributeGraphShims
+import CoreGraphics
 
 // MARK: - _ForegroundLayerViewModifier
 

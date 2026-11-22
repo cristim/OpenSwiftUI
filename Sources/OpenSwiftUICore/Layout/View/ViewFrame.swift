@@ -6,6 +6,7 @@
 //  Status: Complete
 
 package import Foundation
+import CoreGraphics
 
 package struct ViewFrame: Equatable {
     package var origin: ViewOrigin

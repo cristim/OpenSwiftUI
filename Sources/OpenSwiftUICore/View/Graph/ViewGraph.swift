@@ -14,6 +14,7 @@ import Foundation
 package import Foundation
 #endif
 import OpenSwiftUI_SPI
+import CoreGraphics
 
 // MARK: - ViewGraph
 

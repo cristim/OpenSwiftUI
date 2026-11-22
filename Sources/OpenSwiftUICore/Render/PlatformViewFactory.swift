@@ -8,6 +8,7 @@
 
 package import Foundation
 package import OpenQuartzCoreShims
+import CoreGraphics
 
 // MARK: - AnyViewFactory
 

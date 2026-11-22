@@ -8,6 +8,7 @@
 #if canImport(Darwin)
 import Foundation
 package import OpenSwiftUI_SPI
+import CoreGraphics
 
 @objc(OpenSwiftUICorePlatformImage)
 package final class CorePlatformImage: NSObject {

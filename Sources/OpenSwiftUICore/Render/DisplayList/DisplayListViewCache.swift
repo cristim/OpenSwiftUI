@@ -221,7 +221,11 @@ extension DisplayList.ViewUpdater {
         ) -> Time {
             switch item.value {
             case let .content(content):
-                if case let .shape(_, paint, _) = content.value, !paint.isCALayerCompatible {
+                if case let .shape(_, paint, _) = content.value,
+                   !paint.isCALayerCompatible,
+                   // A shape layer can fill with a gradient through its own path, so
+                   // that paint belongs on the shape rather than in a drawing group.
+                   !ShapeLayerHelper.canExpressPaintOnShapeLayer(paint) {
                     item.addDrawingGroup(contentSeed: .init(item.version))
                 }
                 return .infinity
